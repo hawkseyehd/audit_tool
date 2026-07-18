@@ -272,3 +272,15 @@ export type {
   AxeImpact,
   AxeViolation,
 } from "./scanners/accessibility/types.js";
+export {
+  FINDING_CATEGORY_SCORE_GROUPS,
+  SCORE_CATEGORIES,
+  SCORE_CATEGORY_WEIGHTS,
+  SEVERITY_PENALTIES,
+  calculateAuditSummary,
+  calculateCategoryScores,
+  countFindings,
+  selectTopPriorities,
+  type ScoreCategory,
+  type ScoreCategoryScores,
+} from "./scoring/scoring-engine.js";

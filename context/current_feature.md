@@ -1,4 +1,4 @@
-# Current Feature: Accessibility Scanner
+# Current Feature: Scoring Engine
 
 ## Status
 
@@ -6,46 +6,45 @@ Completed
 
 ## Branch
 
-`feature/accessibility-scanner`
+`feature/scoring-engine`
 
 ## Objective
 
-Run bounded axe checks on selected desktop and mobile pages, normalize violations into
-evidence-rich findings, tolerate page failures, and state that automation does not replace
-manual WCAG review.
+Calculate deterministic category and overall audit scores from normalized findings using the
+PRD severity penalties and category weights, then produce schema-valid finding counts and
+client-ready top priorities.
 
 ## Included Scope
 
-- Prioritize successful classified pages and bound scans by the configured page limit.
-- Run isolated desktop and mobile axe checks with one shared browser per audit.
-- Apply crawl-scope and public-network policy to browser requests.
-- Block WebSockets, downloads, and dialogs without interacting with page controls.
-- Continue after page failures and close page contexts and the browser in all outcomes.
-- Normalize axe violations into deterministic, schema-valid findings with bounded selectors.
-- Export the required automated-testing limitation for report generation.
+- Apply the exact Critical, High, Medium, Low, and Info penalties from the PRD.
+- Map every canonical finding category into one of six weighted score groups.
+- Clamp category and overall scores between 0 and 100.
+- Count findings by severity, including informational findings.
+- Select deterministic, deduplicated top priority titles from actionable findings.
+- Keep scoring pure and independent from browser, network, CLI, and filesystem code.
 
 ## Excluded Scope
 
-- Claims of WCAG conformance or replacement of manual accessibility review.
-- Form submission, authentication, or other state-changing page interactions.
-- Unlimited page scans or concurrent browser contexts.
+- Persisting or presenting scores in Markdown or JSON reports.
+- Scanner orchestration or scanner failure policy.
+- Dynamic, user-configurable weights outside the PRD.
 
 ## Acceptance Criteria
 
-- Axe failures do not stop remaining pages.
-- Violations produce deterministic schema-valid findings with bounded selectors.
-- Desktop and mobile modes are supported and browser resources always close.
-- The manual-review disclaimer is mandatory and exported.
+- Severity penalties and category weights match the PRD exactly.
+- Every finding category contributes to exactly one score group.
+- Empty findings produce 100 scores, zero counts, and no priorities.
+- Heavy penalties cannot produce negative scores.
+- Summary output passes the canonical `auditSummarySchema`.
 - All project quality and dependency gates pass.
 
 ## History
 
-- 2026-07-18: Features 1-12 completed through commit `4e1942a`.
-- 2026-07-18: Accessibility Scanner documented and started.
-- 2026-07-18: Added prioritized, bounded desktop/mobile axe execution with request safety,
-  per-page failure isolation, cancellation, and guaranteed browser cleanup.
-- 2026-07-18: Added deterministic violation normalization, severity mapping, bounded selector
-  evidence, and the mandatory manual-review disclaimer.
-- 2026-07-18: Verified a real local Playwright/axe run on both viewports, formatting, linting,
-  strict type checking, 171 tests, exact npm build, dependency compatibility, and a clean
-  production dependency audit.
+- 2026-07-18: Features 1-13 completed through commit `2d4716b`.
+- 2026-07-18: Scoring Engine documented and started.
+- 2026-07-18: Added the exact PRD penalties and six weighted category groups, with every
+  canonical finding category mapped exactly once.
+- 2026-07-18: Added pure category and overall score calculation, 0-100 clamping, severity
+  counts, and deterministic deduplicated top-priority selection.
+- 2026-07-18: Verified formatting, linting, strict type checking, 177 tests, exact npm build,
+  and a clean production dependency audit.

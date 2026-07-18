@@ -1,4 +1,5 @@
 import type { ScannedPage } from "../core/types.js";
+import { classifyPage } from "../classifiers/page-classifier.js";
 import { createCrawlScope, type CrawlRejectionReason } from "../url/crawl-scope.js";
 import { normalizeTargetUrl } from "../url/normalize-url.js";
 import { PageFetchError } from "./errors.js";
@@ -127,13 +128,18 @@ async function processPage(
     );
     const extracted = isHtmlContent(fetchedPage.contentType)
       ? extractPageLinks(fetchedPage.body, fetchedPage.finalUrl, scope)
-      : { links: [], rejectionCounts: {} };
+      : { classificationSignals: {}, links: [], rejectionCounts: {} };
+    const classification = classifyPage({
+      url: fetchedPage.finalUrl,
+      ...(extracted.title === undefined ? {} : { title: extracted.title }),
+      ...extracted.classificationSignals,
+    });
 
     return {
       links: extracted.links,
       page: {
         url: fetchedPage.finalUrl,
-        pageType: "unknown",
+        pageType: classification.pageType,
         statusCode: fetchedPage.statusCode,
         ...(extracted.title === undefined ? {} : { title: extracted.title }),
       },
@@ -142,11 +148,12 @@ async function processPage(
     };
   } catch (error: unknown) {
     signal?.throwIfAborted();
+    const classification = classifyPage({ url });
     return {
       links: [],
       page: {
         url,
-        pageType: "unknown",
+        pageType: classification.pageType,
         error: {
           ...(error instanceof PageFetchError ? { code: error.code } : {}),
           message: safeErrorMessage(error),

@@ -1,4 +1,4 @@
-# Current Feature: Same-Domain Crawler
+# Current Feature: Page Classification
 
 ## Status
 
@@ -6,56 +6,55 @@ Completed
 
 ## Branch
 
-`feature/crawler`
+`feature/page-classification`
 
 ## Objective
 
-Build a polite, bounded crawler that visits the normalized target, extracts and
-prioritizes safe same-scope links, records page metadata and failures, and writes a stable
-JSON crawl artifact for later classifiers and scanners.
+Classify every crawled page with deterministic, explainable rules based on its URL,
+metadata, headings, forms, and high-value UI patterns. Make those classifications usable
+for scanner ordering and later report grouping.
 
 ## Included Scope
 
-- Fetch public HTTP/HTTPS pages with explicit timeouts and a descriptive user agent.
-- Revalidate DNS/network safety before every request and redirect.
-- Follow redirects manually within configured limits and crawl scope.
-- Bound response bodies and parse only HTML/XHTML content.
-- Extract page title and links with Cheerio.
-- Deduplicate canonical URLs before queueing.
-- Respect `maxPages`, concurrency 1-3, crawl delay, retries, and total audit cancellation.
-- Prioritize homepage, contact, pricing, services, products, about, booking, checkout,
-  signup, and login pages.
-- Continue after individual page failures and record safe error metadata.
-- Produce deterministic crawl statistics and rejection counts.
-- Atomically write `crawl-result.json` in the audit JSON output directory.
+- Extract bounded classification signals during the crawler's existing Cheerio parse.
+- Inspect URL paths, titles, headings, forms, controls, and interactive labels.
+- Detect checkout, booking, and authentication patterns without submitting forms or
+  retaining field values.
+- Support every MVP page type defined in the PRD.
+- Return a classification score, confidence, and non-sensitive matched-signal reasons.
+- Store the selected page type on successful and failed crawl records.
+- Provide deterministic page ordering for downstream scanners.
+- Export stable classifier types and functions through the public package entry point.
 
 ## Excluded Scope
 
-- Page classification beyond temporary `unknown` page types.
-- Playwright/browser rendering and screenshots.
-- Lighthouse, axe, and domain scanners.
-- Scoring and client-ready report generation.
+- Playwright rendering, screenshots, and client-side UI inspection.
+- SEO, forms, security, UX, performance, and accessibility findings.
+- Final report grouping and report generation.
+- Machine-learned or remote classification services.
 
 ## Acceptance Criteria
 
-- The starting page is attempted first.
-- No more than `maxPages` pages are attempted.
-- Duplicate, rejected, external, and unsafe URLs never enter the queue.
-- High-value pages are visited before lower-value pages discovered in the same batch.
-- Concurrency never exceeds the validated configuration.
-- Transient failures retry within limits; permanent failures do not.
-- One failed page does not stop the crawl.
-- Redirect destinations are revalidated before fetching.
-- Crawl output validates against a stable schema and is written atomically.
-- Tests use controlled fakes and local response fixtures, never public websites.
+- Root URLs classify as `home`.
+- URL, title, and heading signals contribute independently to classification.
+- Form-only pages classify as `form` when no more specific type wins.
+- Password controls identify auth flows.
+- Payment controls identify checkout flows.
+- Date/time controls and booking language identify booking flows.
+- Ambiguous pages resolve with documented deterministic precedence.
+- Empty or unmatched pages classify as `unknown`.
+- Extracted signals are bounded and never include entered field values.
+- Every successful crawl record stores its classification.
+- Failed pages receive the best URL-only classification available.
+- Downstream scanner ordering is stable and does not mutate its input.
 - All project quality and dependency gates pass.
 
 ## Verification Plan
 
-1. Run crawler, extractor, HTTP adapter, priority, and output-writer tests.
-2. Run formatting, linting, and strict type checking.
-3. Run the full test suite.
-4. Run `npm run build`.
+1. Run classifier tests covering all page types, ambiguity, and UI signals.
+2. Run extractor and crawler integration tests for classification storage.
+3. Run formatting, linting, and strict type checking.
+4. Run the full test suite and exact npm build.
 5. Run production dependency and peer checks.
 
 ## History
@@ -63,11 +62,13 @@ JSON crawl artifact for later classifiers and scanners.
 - 2026-07-18: Project Foundation completed in commit `ee81681`.
 - 2026-07-18: CLI Feature Set completed in commit `8eefd54`.
 - 2026-07-18: URL Normalization and Crawl-Scope Safety completed in commit `3008d18`.
-- 2026-07-18: Same-Domain Crawler documented and started.
-- 2026-07-18: Implemented bounded HTTP fetching, redirect revalidation, streamed response
-  limits, Cheerio extraction, deterministic priority batches, retry/backoff, partial
-  failure recording, crawl schemas, and atomic crawl-result output.
-- 2026-07-18: Connected the crawler to the CLI so audit commands persist real crawl
-  metadata and report the attempted-page count.
-- 2026-07-18: Verified formatting, linting, strict type checking, 85 tests, exact npm
-  build, peer compatibility, and a clean production dependency audit.
+- 2026-07-18: Same-Domain Crawler completed in commit `ff859c1`.
+- 2026-07-18: Page Classification documented and started.
+- 2026-07-18: Implemented deterministic page classification from URL paths, titles,
+  headings, form metadata, payment controls, scheduling controls, password controls, and
+  interactive labels.
+- 2026-07-18: Connected bounded DOM signal extraction and page-type storage to successful
+  and failed crawler records, and added stable downstream scanner ordering.
+- 2026-07-18: Added an LF repository policy for reproducible formatting on Windows.
+- 2026-07-18: Verified repository formatting, linting, strict type checking, 109 tests,
+  exact npm build, dependency compatibility, and a clean production dependency audit.

@@ -52,6 +52,7 @@ describe("crawlWebsite", () => {
     expect(result.stats.attemptedPages).toBe(3);
     expect(result.stats.discoveredUrls).toBe(4);
     expect(maxActive).toBeLessThanOrEqual(2);
+    expect(result.pages.map((page) => page.pageType)).toEqual(["home", "contact", "pricing"]);
   });
 
   it("records a failed page and continues processing its batch", async () => {
@@ -86,6 +87,7 @@ describe("crawlWebsite", () => {
       code: "network",
       message: "Connection reset",
     });
+    expect(result.pages.find((page) => page.url.endsWith("/contact"))?.pageType).toBe("contact");
   });
 
   it("retries transient failures with bounded backoff", async () => {
@@ -128,6 +130,28 @@ describe("crawlWebsite", () => {
 
     expect(result.rejectionCounts).toMatchObject({ download: 1, "unsupported-scheme": 1 });
     expect(result.stats.rejectedLinks).toBe(2);
+  });
+
+  it("stores UI-signal classifications on successful pages", async () => {
+    const fetchPage: PageFetcher = (url) =>
+      Promise.resolve(
+        htmlPage(
+          url,
+          '<form><input type="password" autocomplete="current-password"><button>Continue</button></form>',
+        ),
+      );
+    const config = parseAuditConfig({
+      targetUrl: "https://example.com/access",
+      maxPages: 1,
+      crawlDelayMs: 0,
+    });
+
+    const result = await crawlWebsite(
+      { config },
+      { fetchPage, now: sequentialClock(), sleep: () => Promise.resolve() },
+    );
+
+    expect(result.pages[0]?.pageType).toBe("auth");
   });
 });
 

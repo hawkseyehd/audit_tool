@@ -204,3 +204,12 @@ export type {
   SecurityScanInput,
   SecuritySnapshotInput,
 } from "./scanners/security/types.js";
+export { createUxScanner, scanUx } from "./scanners/ux/ux-scanner.js";
+export { extractUxPageSnapshot } from "./scanners/ux/ux-snapshot.js";
+export { uxPageSnapshotSchema, uxRenderedObservationSchema } from "./scanners/ux/schemas.js";
+export type {
+  UxPageSnapshot,
+  UxRenderedObservation,
+  UxScanInput,
+  UxSnapshotInput,
+} from "./scanners/ux/types.js";

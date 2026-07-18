@@ -1,4 +1,4 @@
-# Current Feature: Security and Privacy Scanner
+# Current Feature: Conversion UX Scanner
 
 ## Status
 
@@ -6,56 +6,48 @@ Completed
 
 ## Branch
 
-`feature/security-privacy-scanner`
+`feature/conversion-ux-scanner`
 
 ## Objective
 
-Assess public HTTPS, response-header, cookie-flag, mixed-content, and privacy signals using
-non-invasive evidence only, then produce carefully scoped findings without claiming a
-penetration test or legal compliance review.
+Detect conversion, contact, navigation, trust, control-label, and mobile-usability signals
+and emit carefully labeled heuristic findings that support, rather than replace, human UX
+review.
 
 ## Included Scope
 
-- Capture HTTPS and optional HTTP-to-HTTPS redirect evidence.
-- Check mixed-content references in HTTPS page markup.
-- Check HSTS, CSP, content-type protection, frame protection, referrer policy, and
-  permissions policy.
-- Parse discrete Set-Cookie headers and check Secure, HttpOnly, and SameSite flags.
-- Detect privacy-policy links and common consent-interface signals.
-- Emit deterministic, schema-valid security and privacy findings with limitations.
+- Extract bounded CTA, contact, navigation, trust, and control-label facts.
+- Accept optional rendered desktop/mobile observations from the browser layer.
+- Check primary CTA presence and above-fold visibility evidence.
+- Check phone/email presence on service-oriented pages.
+- Check contact or booking reachability from navigation.
+- Detect reviews, testimonials, certifications, case studies, and client-logo signals.
+- Check vague interactive labels.
+- Check mobile navigation, CTA, form usability, and horizontal-overflow observations.
+- Emit deterministic `ux` findings explicitly described as heuristic.
 
 ## Excluded Scope
 
-- Penetration testing, vulnerability exploitation, port scanning, or payload injection.
-- Authentication bypass, paywall testing, or access-control testing.
-- TLS cipher/certificate-chain analysis beyond observed HTTPS use.
-- Legal conclusions about privacy or cookie compliance.
+- Automated redesign, conversion guarantees, or subjective aesthetic scoring.
+- Clicking CTAs, opening menus, or submitting forms.
+- Claims that static or screenshot evidence proves complete usability.
 
 ## Acceptance Criteria
 
-- Scanner remains read-only and public-safe.
-- Header matching is case-insensitive and evidence-based.
-- Cookie values are never retained in snapshots or findings.
-- Mixed-content evidence is bounded.
-- Missing headers account for equivalent frame protection in CSP.
-- Findings explain automated-audit limitations and avoid absolute compliance claims.
-- Tests use controlled headers and HTML fixtures.
+- Extraction is bounded and retains no entered data.
+- Rendered observations remain optional and evidence-specific.
+- Every finding states its heuristic nature and likely business impact.
+- Findings avoid absolute claims where manual review is required.
+- IDs, ordering, and evidence are deterministic and schema-valid.
 - All project quality and dependency gates pass.
 
 ## History
 
-- 2026-07-18: Project Foundation completed in commit `ee81681`.
-- 2026-07-18: CLI Feature Set completed in commit `8eefd54`.
-- 2026-07-18: URL Normalization and Crawl-Scope Safety completed in commit `3008d18`.
-- 2026-07-18: Same-Domain Crawler completed in commit `ff859c1`.
-- 2026-07-18: Page Classification completed in commit `aa092f7`.
-- 2026-07-18: Browser Inspection and Evidence completed in commit `13ef0bd`.
-- 2026-07-18: SEO Scanner completed in commit `b0ba224`.
-- 2026-07-18: Form Scanner completed in commit `f5d3c96`.
-- 2026-07-18: Security and Privacy Scanner documented and started.
-- 2026-07-18: Added bounded HTTPS, response-header, cookie-flag, mixed-content, privacy-link,
-  and consent-signal extraction that never retains cookie values.
-- 2026-07-18: Implemented deterministic security and privacy findings with CSP frame-policy
-  equivalence and explicit non-invasive, non-compliance limitations.
-- 2026-07-18: Verified repository formatting, linting, strict type checking, 152 tests,
-  exact npm build, dependency compatibility, and a clean production dependency audit.
+- 2026-07-18: Features 1-9 completed through commit `f2645de`.
+- 2026-07-18: Conversion UX Scanner documented and started.
+- 2026-07-18: Added bounded extraction for CTA, contact, navigation, trust, and control-label
+  signals plus optional desktop/mobile rendered observations.
+- 2026-07-18: Implemented deterministic heuristic findings for conversion visibility,
+  contact reachability, trust, labels, mobile navigation/forms, and viewport overflow.
+- 2026-07-18: Verified formatting, linting, strict type checking, 156 tests, exact npm
+  build, dependency compatibility, and a clean production dependency audit.

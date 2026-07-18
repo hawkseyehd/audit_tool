@@ -22,6 +22,7 @@ export { writeBrowserInspectionResult } from "./browser/browser-result-writer.js
 export { BrowserInspectionError, type BrowserInspectionErrorCode } from "./browser/errors.js";
 export {
   createPlaywrightBrowserSession,
+  createBrowserContextOptions,
   evaluateBrowserRequestSafety,
   type BrowserRequestSafetyDecision,
   type BrowserRequestSafetyInput,
@@ -246,3 +247,28 @@ export type {
   LighthouseRunner,
   LighthouseScanInput,
 } from "./scanners/lighthouse/types.js";
+export {
+  ACCESSIBILITY_AUTOMATION_DISCLAIMER,
+  createAccessibilityScanner,
+  scanAccessibility,
+} from "./scanners/accessibility/accessibility-scanner.js";
+export {
+  createAccessibilitySession,
+  runAccessibilityAudits,
+} from "./scanners/accessibility/accessibility-adapter.js";
+export {
+  accessibilityPageResultSchema,
+  axeImpactSchema,
+  axeViolationSchema,
+} from "./scanners/accessibility/schemas.js";
+export type {
+  AccessibilityAuditDependencies,
+  AccessibilityAuditOptions,
+  AccessibilityPageResult,
+  AccessibilityPageRequest,
+  AccessibilityScanInput,
+  AccessibilitySession,
+  AccessibilitySessionLauncher,
+  AxeImpact,
+  AxeViolation,
+} from "./scanners/accessibility/types.js";

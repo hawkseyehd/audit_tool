@@ -3,10 +3,13 @@ import { createServer, type Server } from "node:http";
 export interface AuditFixtureSite {
   readonly url: string;
   close(): Promise<void>;
+  getRequests(): readonly { readonly method: string; readonly path: string }[];
 }
 
 export async function startAuditFixtureSite(): Promise<AuditFixtureSite> {
+  const requests: { method: string; path: string }[] = [];
   const server = createServer((request, response) => {
+    requests.push({ method: request.method ?? "UNKNOWN", path: request.url ?? "/" });
     if (request.url === "/robots.txt") {
       response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
       response.end("User-agent: *\nAllow: /\nSitemap: /sitemap.xml");
@@ -40,11 +43,12 @@ export async function startAuditFixtureSite(): Promise<AuditFixtureSite> {
   return {
     url: `http://127.0.0.1:${String(address.port)}/`,
     close: () => close(server),
+    getRequests: () => [...requests],
   };
 }
 
 function homePage(): string {
-  return "<!doctype html><html lang='en'><head><title>Controlled Website Audit Fixture</title><meta name='description' content='A controlled local website used for repeatable browser, accessibility, scanner, and report integration testing.'><link rel='canonical' href='/'></head><body><header><nav><a href='/contact'>Contact</a></nav></header><main><h1>Audit fixture</h1><p>Reliable local integration evidence.</p><button></button><a href='/contact'>Contact us</a></main></body></html>";
+  return "<!doctype html><html lang='en'><head><title>Controlled Website Audit Fixture</title><meta name='description' content='A controlled local website used for repeatable browser, accessibility, scanner, and report integration testing.'><link rel='canonical' href='/'></head><body><header><nav><a href='/contact'>Contact</a><a href='/pricing'>Pricing</a><a href='/services'>Services</a><a href='/product'>Product</a><a href='/about'>About</a><a href='/blog'>Blog</a><a href='/booking'>Booking</a><a href='/checkout'>Checkout</a><a href='/login'>Login</a></nav></header><main><h1>Audit fixture</h1><p>Reliable local integration evidence.</p><button></button><a href='/contact'>Contact us</a></main></body></html>";
 }
 
 function contactPage(): string {

@@ -132,6 +132,7 @@ export const auditOutputsSchema = z
   .object({
     htmlReportPath: pathSchema.optional(),
     markdownReportPath: pathSchema.optional(),
+    pdfReportPath: pathSchema.optional(),
     jsonReportPath: pathSchema.optional(),
     screenshotDirectory: pathSchema.optional(),
   })

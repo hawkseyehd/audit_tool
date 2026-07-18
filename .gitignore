@@ -8,6 +8,8 @@ reports/*
 !reports/.gitkeep
 playwright-report/
 test-results/
+output/
+tmp/
 *.log
 
 # Local environment files

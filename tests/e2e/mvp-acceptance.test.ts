@@ -83,14 +83,17 @@ describe("MVP acceptance", () => {
       expect(stderr).toEqual([]);
       expect(stdout.join("\n")).toContain("Audit completed: audit-mvp-acceptance");
       expect(stdout.join("\n")).toContain("Scanned pages: 10");
+      expect(stdout.join("\n")).toContain("PDF report:");
 
       const jsonPath = join(outputDir, auditId, "json", "audit-result.json");
       const htmlPath = join(outputDir, auditId, "html", "audit-report.html");
       const markdownPath = join(outputDir, auditId, "markdown", "audit-report.md");
+      const pdfPath = join(outputDir, auditId, "pdf", "audit-report.pdf");
       const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
       const result = auditResultSchema.parse(persisted);
       const html = await readFile(htmlPath, "utf8");
       const markdown = await readFile(markdownPath, "utf8");
+      const pdf = await readFile(pdfPath);
 
       expect(result.scannedPages).toHaveLength(10);
       expect(
@@ -112,11 +115,13 @@ describe("MVP acceptance", () => {
       }
       expect(result.outputs.htmlReportPath).toBe(htmlPath);
       expect(result.outputs.markdownReportPath).toBe(markdownPath);
+      expect(result.outputs.pdfReportPath).toBe(pdfPath);
       expect(result.outputs.jsonReportPath).toBe(jsonPath);
       expect(html).toContain("Audit Report");
       expect(html).toContain("Detailed findings");
       expect(markdown).toContain("# Website Audit Report");
       expect(markdown).toContain("## Findings by Severity");
+      expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(site.getRequests().some((request) => request.method === "POST")).toBe(false);
     } finally {
       await site.close();

@@ -42,6 +42,16 @@ describe("runAuditOrchestration", () => {
       now: sequentialClock(),
       runAccessibility: () => Promise.resolve(accessibilityResults()),
       runLighthouse: () => Promise.resolve(lighthouseResults()),
+      writePdf: (_directory, result) =>
+        Promise.resolve(
+          auditResultSchema.parse({
+            ...result,
+            outputs: {
+              ...result.outputs,
+              pdfReportPath: "C:/reports/audit-complete-test/pdf/audit-report.pdf",
+            },
+          }),
+        ),
     });
 
     expect(() => auditResultSchema.parse(outcome.auditResult)).not.toThrow();
@@ -56,6 +66,7 @@ describe("runAuditOrchestration", () => {
     const jsonPath = outcome.auditResult.outputs.jsonReportPath ?? "";
     const htmlPath = outcome.auditResult.outputs.htmlReportPath ?? "";
     const markdownPath = outcome.auditResult.outputs.markdownReportPath ?? "";
+    expect(outcome.auditResult.outputs.pdfReportPath).toContain("audit-report.pdf");
     const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
     const html = await readFile(htmlPath, "utf8");
     const markdown = await readFile(markdownPath, "utf8");
@@ -81,6 +92,7 @@ describe("runAuditOrchestration", () => {
       includeAnalytics: false,
       writeHtml: false,
       writeMarkdown: false,
+      writePdf: false,
     });
     const outcome = await runAuditOrchestration(config, {
       createAuditId: () => "audit-partial-test",
@@ -117,6 +129,9 @@ describe("runAuditOrchestration", () => {
     const writeMarkdown: NonNullable<AuditOrchestratorDependencies["writeMarkdown"]> = vi.fn(
       (_directory, result) => Promise.resolve(result),
     );
+    const writePdf: NonNullable<AuditOrchestratorDependencies["writePdf"]> = vi.fn(
+      (_directory, result) => Promise.resolve(result),
+    );
     const config = parseAuditConfig({
       targetUrl: "example.com",
       maxPages: 1,
@@ -131,6 +146,7 @@ describe("runAuditOrchestration", () => {
       writeHtml: false,
       writeJson: false,
       writeMarkdown: false,
+      writePdf: false,
     });
 
     const outcome = await runAuditOrchestration(config, {
@@ -144,6 +160,7 @@ describe("runAuditOrchestration", () => {
       writeHtml,
       writeJson,
       writeMarkdown,
+      writePdf,
     });
 
     expect(runAccessibility).not.toHaveBeenCalled();
@@ -152,6 +169,7 @@ describe("runAuditOrchestration", () => {
     expect(writeHtml).not.toHaveBeenCalled();
     expect(writeJson).not.toHaveBeenCalled();
     expect(writeMarkdown).not.toHaveBeenCalled();
+    expect(writePdf).not.toHaveBeenCalled();
     expect(outcome.auditResult.findings).toEqual([]);
     expect(Object.keys(outcome.auditResult.outputs)).toEqual(["screenshotDirectory"]);
     expect(outcome.auditResult.outputs.screenshotDirectory ?? "").toContain("screenshots");
@@ -169,6 +187,7 @@ describe("runAuditOrchestration", () => {
       includeAnalytics: false,
       includeAccessibility: false,
       includeLighthouse: false,
+      writePdf: false,
     });
     const outcome = await runAuditOrchestration(config, {
       createAuditId: () => "audit-crawl-failed-test",
@@ -203,6 +222,7 @@ describe("runAuditOrchestration", () => {
         writeHtml: false,
         writeJson: false,
         writeMarkdown: false,
+        writePdf: false,
       });
       const run = runAuditOrchestration(config, {
         createAuditId: () => "audit-deadline-test",
@@ -214,6 +234,7 @@ describe("runAuditOrchestration", () => {
             jsonDirectory: "C:/reports/audit-deadline-test/json",
             htmlDirectory: "C:/reports/audit-deadline-test/html",
             markdownDirectory: "C:/reports/audit-deadline-test/markdown",
+            pdfDirectory: "C:/reports/audit-deadline-test/pdf",
           }),
         crawl: (options) =>
           new Promise<CrawlResult>((_resolve, reject) => {

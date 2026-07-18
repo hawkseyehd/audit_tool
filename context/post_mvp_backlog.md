@@ -34,6 +34,8 @@ structure, standalone asset policy, print behavior, escaping, theming, and parit
 
 #### PM-02 PDF export
 
+Status: Completed on 2026-07-18.
+
 Depends on PM-01. Select a deterministic HTML-to-PDF runtime, define page layout, headers,
 footers, link behavior, screenshot handling, font licensing, and visual regression checks.
 

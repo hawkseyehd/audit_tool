@@ -235,7 +235,7 @@ function renderScope(result: AuditResult): string {
       ${metadataItem("Completed", formatTimestamp(result.completedAt))}
     </dl>
     <div class="table-wrap">
-      <table>
+      <table class="scope-table">
         <thead><tr><th scope="col">Page</th><th scope="col">Type</th><th scope="col">HTTP</th><th scope="col">Inspection</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -616,6 +616,9 @@ tbody th { font-weight: 700; }
 .score-track { width: 100%; min-width: 110px; height: 8px; margin-top: 6px; background: #dce3ec; }
 .score-track span { display: block; height: 100%; background: var(--primary); }
 .cell-detail, .status-detail { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.scope-table th:nth-child(2), .scope-table td:nth-child(2) { width: 13%; white-space: nowrap; overflow-wrap: normal; }
+.scope-table th:nth-child(3), .scope-table td:nth-child(3) { width: 12%; white-space: nowrap; overflow-wrap: normal; }
+.scope-table th:nth-child(4), .scope-table td:nth-child(4) { width: 34%; }
 .status--complete { color: var(--low); }
 .status--failed { color: var(--critical); }
 
@@ -701,19 +704,25 @@ code { font-family: Consolas, "Courier New", monospace; font-size: 12px; overflo
   .score-panel { padding: 6mm; }
   .score-panel strong { font-size: 34pt; }
   .cover-summary { margin-top: 18mm; }
+  .cover-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cover-summary > div + div { padding-left: 6mm; border-top: 0; border-left: 1px solid var(--rule); }
   .cover-note { font-size: 8.5pt; }
   .report-section { padding: 10mm 0 1mm; }
   .section-heading { margin-bottom: 5mm; }
   .section-heading h2 { font-size: 17pt; }
   .lead { font-size: 11.5pt; }
+  .severity-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .severity-metric + .severity-metric, .severity-metric:nth-child(even) { border-left: 1px solid var(--rule); }
+  .scope-meta, .finding-meta { grid-template-columns: 1fr 1fr; }
+  .evidence dl { grid-template-columns: 1fr 1fr; }
   table { font-size: 8.5pt; }
   th, td { padding: 2.5mm 2mm; }
   thead th { font-size: 7.5pt; }
   tr, .notice, .severity-grid, .priority-list li, .plan-phase { break-inside: avoid; }
-  .finding { padding: 5mm; break-inside: auto; }
+  .finding { padding: 5mm; break-inside: avoid-page; }
   .finding-header, .finding h3, .finding-meta, .finding-block h4, .evidence h4 { break-after: avoid; }
   .finding h3 { font-size: 13pt; }
-  .finding-block, .evidence, .evidence-image { break-inside: avoid; }
+  .finding-block, .evidence-image { break-inside: avoid; }
   .evidence-image img { max-height: 105mm; }
   a { color: #174f9f; }
 }

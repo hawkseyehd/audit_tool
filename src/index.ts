@@ -58,3 +58,18 @@ export {
   createLogger,
   type CreateLoggerOptions,
 } from "./infrastructure/logger.js";
+export {
+  createCrawlScope,
+  evaluateCrawlCandidate,
+  type CrawlRejectionReason,
+  type CrawlScope,
+  type CrawlUrlDecision,
+} from "./url/crawl-scope.js";
+export { assertPublicNetworkTarget, type DnsResolver } from "./url/network-safety.js";
+export {
+  UrlPolicyError,
+  deduplicateUrls,
+  normalizeDiscoveredUrl,
+  normalizeTargetUrl,
+  type UrlPolicyErrorCode,
+} from "./url/normalize-url.js";

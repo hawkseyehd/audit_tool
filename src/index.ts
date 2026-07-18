@@ -62,6 +62,7 @@ export { scoreUrlPriority } from "./crawler/priority.js";
 export { CRAWL_SCHEMA_VERSION, crawlResultSchema, crawlStatsSchema } from "./crawler/schemas.js";
 export type {
   CrawlDependencies,
+  CrawlPageResource,
   CrawlResult,
   CrawlStats,
   CrawlWebsiteOptions,
@@ -73,15 +74,24 @@ export { executeCli, type CliDependencies, type CliLogger } from "./cli/program.
 export {
   createCrawlerAuditRunner,
   createBrowserAuditRunner,
+  createFullAuditRunner,
   runBrowserAudit,
   runCrawlerAudit,
   runFoundationAudit,
+  runFullAudit,
   type AuditRunReceipt,
   type AuditRunner,
   type BrowserAuditRunnerDependencies,
   type BrowserInspector,
   type CrawlRunner,
 } from "./cli/runner.js";
+export {
+  runAuditOrchestration,
+  type AuditOrchestratorDependencies,
+  type FullAuditRunResult,
+  type OrchestratorCrawlRunner,
+  type SeoResourceDiscovery,
+} from "./core/audit-orchestrator.js";
 export {
   AUDIT_SCHEMA_VERSION,
   EVIDENCE_SOURCES,

@@ -8,6 +8,15 @@ import type { FetchPageOptions, FetchedPage, PageFetcher } from "./types.js";
 
 const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
 const DEFAULT_USER_AGENT = "WebsiteAuditTool/0.1 (+public-safe automated audit)";
+const CAPTURED_RESPONSE_HEADERS = [
+  "content-security-policy",
+  "content-type",
+  "permissions-policy",
+  "referrer-policy",
+  "strict-transport-security",
+  "x-content-type-options",
+  "x-frame-options",
+] as const;
 
 export interface HttpPageFetcherDependencies {
   readonly assertSafeTarget?: (url: string) => Promise<void>;
@@ -66,10 +75,21 @@ export function createHttpPageFetcher(dependencies: HttpPageFetcherDependencies 
         body,
         contentType,
         finalUrl: currentUrl,
+        headers: captureResponseHeaders(response.headers),
+        setCookieHeaders: response.headers.getSetCookie(),
         statusCode: response.status,
       } satisfies FetchedPage;
     }
   };
+}
+
+function captureResponseHeaders(headers: Headers): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    CAPTURED_RESPONSE_HEADERS.flatMap((name) => {
+      const value = headers.get(name);
+      return value === null ? [] : [[name, value.slice(0, 5_000)]];
+    }),
+  );
 }
 
 async function requestPage(

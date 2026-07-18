@@ -9,6 +9,7 @@ import {
   BROWSER_INSPECTION_SCHEMA_VERSION,
   createBrowserAuditRunner,
   createCrawlerAuditRunner,
+  createFullAuditRunner,
   parseAuditConfig,
   runFoundationAudit,
   type BrowserInspectionResult,
@@ -83,6 +84,38 @@ describe("createBrowserAuditRunner", () => {
   });
 });
 
+describe("createFullAuditRunner", () => {
+  it("returns completed lifecycle paths from the canonical orchestrator", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "website-audit-full-runner-"));
+    temporaryDirectories.push(outputDir);
+    const config = parseAuditConfig({
+      targetUrl: "example.com",
+      outputDir,
+      includeSeo: false,
+      includeForms: false,
+      includeSecurity: false,
+      includeUxHeuristics: false,
+      includeAnalytics: false,
+      includeAccessibility: false,
+      includeLighthouse: false,
+    });
+    const runner = createFullAuditRunner({
+      createAuditId: () => "audit-full-runner-test",
+      crawl: () => Promise.resolve(createCrawlResult()),
+      inspect: () => Promise.resolve(createBrowserResult()),
+      now: sequentialClock(),
+    });
+
+    const receipt = await runner(config);
+
+    expect(receipt.status).toBe("completed");
+    expect(receipt.scannedPageCount).toBe(1);
+    expect(receipt.markdownReportPath).toContain("audit-report.md");
+    expect(receipt.jsonReportPath).toContain("audit-result.json");
+    expect(receipt.screenshotDirectory).toContain("screenshots");
+  });
+});
+
 function createCrawlResult(): CrawlResult {
   return {
     schemaVersion: CRAWL_SCHEMA_VERSION,
@@ -127,5 +160,14 @@ function createBrowserResult(): BrowserInspectionResult {
       failedInspections: 0,
       screenshotsCaptured: 0,
     },
+  };
+}
+
+function sequentialClock(): () => Date {
+  let offset = 0;
+  return () => {
+    const date = new Date(Date.parse("2026-07-18T10:00:00.000Z") + offset * 1_000);
+    offset += 1;
+    return date;
   };
 }

@@ -110,6 +110,7 @@ describe("createFullAuditRunner", () => {
 
     expect(receipt.status).toBe("completed");
     expect(receipt.scannedPageCount).toBe(1);
+    expect(receipt.htmlReportPath).toContain("audit-report.html");
     expect(receipt.markdownReportPath).toContain("audit-report.md");
     expect(receipt.jsonReportPath).toContain("audit-result.json");
     expect(receipt.screenshotDirectory).toContain("screenshots");

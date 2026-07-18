@@ -33,12 +33,13 @@ describe("createAuditId", () => {
 });
 
 describe("createAuditOutputDirectories", () => {
-  it("creates audit-specific screenshot, JSON, and Markdown directories", async () => {
+  it("creates audit-specific screenshot, JSON, HTML, and Markdown directories", async () => {
     const outputRoot = await createTemporaryDirectory();
     const directories = await createAuditOutputDirectories(outputRoot, "audit-safe-id");
 
     await expect(access(directories.screenshotsDirectory)).resolves.toBeUndefined();
     await expect(access(directories.jsonDirectory)).resolves.toBeUndefined();
+    await expect(access(directories.htmlDirectory)).resolves.toBeUndefined();
     await expect(access(directories.markdownDirectory)).resolves.toBeUndefined();
 
     const relativeAuditPath = relative(directories.rootDirectory, directories.auditDirectory);

@@ -8,6 +8,7 @@ const CLI_VERSION = "0.1.0";
 
 interface AuditCliOptions {
   readonly desktop?: boolean;
+  readonly html?: boolean;
   readonly json?: boolean;
   readonly markdown?: boolean;
   readonly maxPages: number;
@@ -94,6 +95,7 @@ function createProgram(dependencies: CliDependencies): Command {
     .option("--output <directory>", "Directory for audit output", "./reports")
     .option("--mobile", "Enable the mobile viewport")
     .option("--desktop", "Enable the desktop viewport")
+    .option("--html", "Write a standalone HTML report")
     .option("--json", "Write structured JSON output")
     .option("--markdown", "Write a Markdown report")
     .option("--no-submit-forms", "Explicitly keep form submission disabled")
@@ -135,6 +137,7 @@ function buildAuditConfig(targetUrl: string, options: AuditCliOptions): AuditCon
     maxPages: options.maxPages,
     outputDir: options.output,
     viewports,
+    writeHtml: outputFormats.writeHtml,
     writeJson: outputFormats.writeJson,
     writeMarkdown: outputFormats.writeMarkdown,
     submitForms: false,
@@ -155,14 +158,16 @@ function resolveViewports(options: AuditCliOptions): ("desktop" | "mobile")[] {
 }
 
 function resolveOutputFormats(options: AuditCliOptions): {
+  readonly writeHtml: boolean;
   readonly writeJson: boolean;
   readonly writeMarkdown: boolean;
 } {
-  if (options.json !== true && options.markdown !== true) {
-    return { writeJson: true, writeMarkdown: true };
+  if (options.html !== true && options.json !== true && options.markdown !== true) {
+    return { writeHtml: true, writeJson: true, writeMarkdown: true };
   }
 
   return {
+    writeHtml: options.html === true,
     writeJson: options.json === true,
     writeMarkdown: options.markdown === true,
   };
@@ -191,6 +196,9 @@ function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): 
   dependencies.writeOut(`Scanned pages: ${String(receipt.scannedPageCount)}`);
   dependencies.writeOut(`Output directory: ${receipt.outputDirectory}`);
 
+  if (receipt.htmlReportPath !== undefined) {
+    dependencies.writeOut(`HTML report: ${receipt.htmlReportPath}`);
+  }
   if (receipt.markdownReportPath !== undefined) {
     dependencies.writeOut(`Markdown report: ${receipt.markdownReportPath}`);
   }

@@ -17,6 +17,7 @@ export interface AuditOutputDirectories {
   readonly auditDirectory: string;
   readonly screenshotsDirectory: string;
   readonly jsonDirectory: string;
+  readonly htmlDirectory: string;
   readonly markdownDirectory: string;
 }
 
@@ -56,11 +57,13 @@ export async function createAuditOutputDirectories(
 
   const screenshotsDirectory = resolve(auditDirectory, "screenshots");
   const jsonDirectory = resolve(auditDirectory, "json");
+  const htmlDirectory = resolve(auditDirectory, "html");
   const markdownDirectory = resolve(auditDirectory, "markdown");
 
   await Promise.all([
     mkdir(screenshotsDirectory, { recursive: true }),
     mkdir(jsonDirectory, { recursive: true }),
+    mkdir(htmlDirectory, { recursive: true }),
     mkdir(markdownDirectory, { recursive: true }),
   ]);
 
@@ -69,6 +72,7 @@ export async function createAuditOutputDirectories(
     auditDirectory,
     screenshotsDirectory,
     jsonDirectory,
+    htmlDirectory,
     markdownDirectory,
   };
 }

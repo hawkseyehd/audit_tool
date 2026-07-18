@@ -31,7 +31,7 @@ afterEach(async () => {
 });
 
 describe("runAuditOrchestration", () => {
-  it("coordinates crawl, evidence, all scanners, scoring, and both reports", async () => {
+  it("coordinates crawl, evidence, all scanners, scoring, and reports", async () => {
     const outputDir = await createTemporaryDirectory();
     const config = parseAuditConfig({ targetUrl: "example.com", maxPages: 1, outputDir });
     const outcome = await runAuditOrchestration(config, {
@@ -54,10 +54,14 @@ describe("runAuditOrchestration", () => {
     expect(outcome.auditResult.summary.findingCounts.high).toBeGreaterThan(0);
 
     const jsonPath = outcome.auditResult.outputs.jsonReportPath ?? "";
+    const htmlPath = outcome.auditResult.outputs.htmlReportPath ?? "";
     const markdownPath = outcome.auditResult.outputs.markdownReportPath ?? "";
     const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
+    const html = await readFile(htmlPath, "utf8");
     const markdown = await readFile(markdownPath, "utf8");
     expect(persisted).toEqual(outcome.auditResult);
+    expect(html).toContain("Audit Report");
+    expect(html).toContain(ACCESSIBILITY_AUTOMATION_DISCLAIMER);
     expect(markdown).toContain(ACCESSIBILITY_AUTOMATION_DISCLAIMER);
     expect(JSON.stringify(persisted)).not.toContain("top-secret-cookie-value");
     expect(JSON.stringify(persisted)).not.toContain("<form");
@@ -75,6 +79,7 @@ describe("runAuditOrchestration", () => {
       includeSecurity: false,
       includeUxHeuristics: false,
       includeAnalytics: false,
+      writeHtml: false,
       writeMarkdown: false,
     });
     const outcome = await runAuditOrchestration(config, {
@@ -103,6 +108,9 @@ describe("runAuditOrchestration", () => {
     const runAccessibility = vi.fn(() => Promise.resolve([]));
     const runLighthouse = vi.fn(() => Promise.resolve([]));
     const discoverSeoResources = vi.fn(() => Promise.resolve(siteResources()));
+    const writeHtml: NonNullable<AuditOrchestratorDependencies["writeHtml"]> = vi.fn(
+      (_directory, result) => Promise.resolve(result),
+    );
     const writeJson: NonNullable<AuditOrchestratorDependencies["writeJson"]> = vi.fn(
       (_directory, result) => Promise.resolve(auditResultSchema.parse(result)),
     );
@@ -120,6 +128,7 @@ describe("runAuditOrchestration", () => {
       includeAnalytics: false,
       includeAccessibility: false,
       includeLighthouse: false,
+      writeHtml: false,
       writeJson: false,
       writeMarkdown: false,
     });
@@ -132,6 +141,7 @@ describe("runAuditOrchestration", () => {
       now: sequentialClock(),
       runAccessibility,
       runLighthouse,
+      writeHtml,
       writeJson,
       writeMarkdown,
     });
@@ -139,6 +149,7 @@ describe("runAuditOrchestration", () => {
     expect(runAccessibility).not.toHaveBeenCalled();
     expect(runLighthouse).not.toHaveBeenCalled();
     expect(discoverSeoResources).not.toHaveBeenCalled();
+    expect(writeHtml).not.toHaveBeenCalled();
     expect(writeJson).not.toHaveBeenCalled();
     expect(writeMarkdown).not.toHaveBeenCalled();
     expect(outcome.auditResult.findings).toEqual([]);
@@ -172,6 +183,7 @@ describe("runAuditOrchestration", () => {
       severity: "info",
     });
     expect(outcome.auditResult.outputs.jsonReportPath).toContain("audit-result.json");
+    expect(outcome.auditResult.outputs.htmlReportPath).toContain("audit-report.html");
     expect(outcome.auditResult.outputs.markdownReportPath).toContain("audit-report.md");
   });
 
@@ -188,6 +200,7 @@ describe("runAuditOrchestration", () => {
         includeAnalytics: false,
         includeAccessibility: false,
         includeLighthouse: false,
+        writeHtml: false,
         writeJson: false,
         writeMarkdown: false,
       });
@@ -199,6 +212,7 @@ describe("runAuditOrchestration", () => {
             auditDirectory: "C:/reports/audit-deadline-test",
             screenshotsDirectory: "C:/reports/audit-deadline-test/screenshots",
             jsonDirectory: "C:/reports/audit-deadline-test/json",
+            htmlDirectory: "C:/reports/audit-deadline-test/html",
             markdownDirectory: "C:/reports/audit-deadline-test/markdown",
           }),
         crawl: (options) =>

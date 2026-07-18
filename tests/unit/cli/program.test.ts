@@ -30,6 +30,7 @@ describe("executeCli", () => {
         maxPages: 15,
         outputDir: "./reports",
         viewports: ["desktop"],
+        writeHtml: true,
         writeJson: true,
         writeMarkdown: true,
         submitForms: false,
@@ -65,6 +66,7 @@ describe("executeCli", () => {
       maxPages: 20,
       outputDir: "./custom-reports",
       viewports: ["desktop", "mobile"],
+      writeHtml: false,
       writeJson: true,
       writeMarkdown: false,
       submitForms: false,
@@ -145,6 +147,7 @@ describe("executeCli", () => {
     expect(help).toContain("--output");
     expect(help).toContain("--mobile");
     expect(help).toContain("--desktop");
+    expect(help).toContain("--html");
     expect(help).toContain("--json");
     expect(help).toContain("--markdown");
     expect(help).toContain("--no-submit-forms");

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This record covers the Website Audit Tool MVP through Feature 18. It records repeatable local
+This record covers the Website Audit Tool MVP through PM-02. It records repeatable local
 test coverage and one-time public-safe connectivity validation performed on 2026-07-18. It is
 not a quality assessment of the external sites and does not authorize invasive testing.
 
@@ -19,7 +19,10 @@ The normal Vitest suite is deterministic and uses local inputs only. It covers:
 - Playwright request safety, browser cleanup, screenshots, failure capture, and cancellation.
 - SEO, form, security/privacy, conversion UX, analytics, Lighthouse, and accessibility scanners.
 - Exact scoring penalties, category weights, clamping, counts, and deterministic priorities.
-- Markdown escaping, required report sections, partial/empty states, and atomic persistence.
+- Markdown and HTML escaping, required report sections, partial/empty states, and atomic
+  persistence.
+- A4 PDF rendering, output signature validation, disabled JavaScript, blocked non-local renderer
+  requests, temporary-artifact cleanup, and selective/default CLI output behavior.
 - Stable JSON serialization, canonical schema validation, and atomic persistence.
 - Full orchestration, disabled scanners, scanner failures, crawl failures, deadlines, scoring,
   output ordering, and CLI completion receipts.
@@ -34,12 +37,12 @@ The normal Vitest suite is deterministic and uses local inputs only. It covers:
 4. Static SEO, form, security/privacy, UX, and analytics scanners.
 5. A deterministic Lighthouse adapter result; the real Lighthouse process path was separately
    validated in Features 12 and 17.
-6. Scoring, screenshots, Markdown output, JSON output, schema validation, and cleanup.
+6. Scoring, screenshots, PDF, HTML, Markdown, JSON, schema validation, and cleanup.
 
 The integration test completed in approximately five seconds on the validation machine. It
 asserts that deliberate form, accessibility, and performance defects become findings; a
-screenshot exists; both reports exist; required report sections are present; and raw HTML and
-cookie values are absent from JSON.
+screenshot exists; all report formats exist; required report sections are present; PDF output has
+a valid signature; and raw HTML and cookie values are absent from JSON.
 
 Feature 17 also completed a controlled real local run through the actual Lighthouse process in
 14.7 seconds. That run produced one scanned page, 10 findings, an overall score of 90.95, and
@@ -64,6 +67,13 @@ and the one-page crawl bound. It does not claim that these sites passed an audit
 
 ## Report Review
 
+The PM-02 client PDF sample was rendered from a representative audit with five scanned pages, ten
+findings across every severity, a page failure, long URLs, and screenshot evidence. Poppler
+rendered all 15 A4 pages to PNG and every page was inspected for clipping, overlap, pagination,
+footer consistency, tables, evidence, empty space, and final-page behavior. Structural inspection
+confirmed tagged output, no JavaScript, 16 link annotations, non-empty extractable text on every
+page, complete required sections, and the title `Audit Report - Northstar Dental Studio`.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.
@@ -78,10 +88,11 @@ returned object and contains final output paths.
 - Individual crawl page failures remain in `scannedPages` while the crawl continues.
 - Accessibility and Lighthouse page failures do not stop later pages.
 - Scanner and browser failures become informational operational findings and do not lower score.
-- A crawl failure still produces partial Markdown and JSON reports.
+- A crawl failure still produces partial PDF, HTML, Markdown, and JSON reports.
 - Audit deadline expiry produces a partial result.
-- Browser contexts, browsers, Lighthouse Chrome, temporary files, fixture servers, and temporary
-  output directories are closed or removed in `finally` paths covered by tests.
+- Browser contexts, browsers, Lighthouse Chrome, PDF renderer contexts, temporary files, fixture
+  servers, and temporary output directories are closed or removed in `finally` paths covered by
+  tests.
 
 ## Regression Commands
 

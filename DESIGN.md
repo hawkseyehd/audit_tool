@@ -72,6 +72,5 @@ All colored status treatments include a text label and maintain print-readable c
 
 - Print backgrounds are enabled.
 - Links remain visible and clickable.
-- A compact header shows the site name and `Audit Report` after the cover.
-- The footer shows the audit ID and `Page X of Y`.
+- A compact footer shows `Audit Report`, the site name, the audit ID, and `Page X of Y`.
 - Avoid orphaned headings, clipped content, blank trailing pages, and split status labels.

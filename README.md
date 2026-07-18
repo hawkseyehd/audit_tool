@@ -13,7 +13,7 @@ into prioritized, client-ready findings.
 - SEO, form, security/privacy, conversion UX, analytics, Lighthouse, and axe scanners.
 - Evidence-rich normalized findings with severity, impact, and recommendations.
 - Weighted category and overall scoring with top-priority fixes.
-- Client-ready standalone HTML and Markdown reports, plus stable schema-versioned JSON.
+- Client-ready A4 PDF, standalone HTML, and Markdown reports, plus stable schema-versioned JSON.
 - Partial-result handling when an individual page or scanner fails.
 
 ## Requirements
@@ -49,12 +49,14 @@ node dist/cli/index.js audit https://example.com \
   --html \
   --json \
   --markdown \
+  --pdf \
   --no-submit-forms
 ```
 
 Use `node dist/cli/index.js audit --help` for the complete command help. When no output-format
-flag is specified, HTML, JSON, and Markdown are written. Supplying one or more of `--html`,
-`--json`, or `--markdown` writes only the selected formats. Desktop is the default viewport.
+flag is specified, PDF, HTML, JSON, and Markdown are written. Supplying one or more of `--pdf`,
+`--html`, `--json`, or `--markdown` writes only the selected formats. Desktop is the default
+viewport.
 
 ## Output
 
@@ -69,14 +71,17 @@ reports/
       audit-result.json
     markdown/
       audit-report.md
+    pdf/
+      audit-report.pdf
     screenshots/
       *.png
 ```
 
-The standalone HTML report contains no remote assets or scripts and includes the complete client
-report with print styles and audit-local screenshot evidence. The JSON artifact is validated
-against the canonical `AuditResult` schema and includes the schema version, target, scanned pages,
-summary, findings, evidence, and output paths.
+The A4 PDF and standalone HTML report include the complete client report and available audit-local
+screenshot evidence. PDF rendering disables JavaScript, blocks non-local requests, uses no remote
+fonts or assets, and adds page-numbered footers. The JSON artifact is validated against the
+canonical `AuditResult` schema and includes the schema version, target, scanned pages, summary,
+findings, evidence, and output paths.
 
 ## Development
 
@@ -99,6 +104,7 @@ controlled local fixture sites and do not depend on public websites.
   targets in production adapters.
 - Security checks are passive basics, not penetration testing.
 - Raw page HTML and cookie values are not persisted in the canonical audit result.
+- Client report rendering cannot execute audited scripts or load remote report assets.
 - Concurrency, retries, redirects, response size, page count, screenshots, browser navigation,
   Lighthouse pages, and total audit duration are bounded.
 

@@ -19,6 +19,7 @@ export interface AuditOutputDirectories {
   readonly jsonDirectory: string;
   readonly htmlDirectory: string;
   readonly markdownDirectory: string;
+  readonly pdfDirectory: string;
 }
 
 export interface AuditIdDependencies {
@@ -59,12 +60,14 @@ export async function createAuditOutputDirectories(
   const jsonDirectory = resolve(auditDirectory, "json");
   const htmlDirectory = resolve(auditDirectory, "html");
   const markdownDirectory = resolve(auditDirectory, "markdown");
+  const pdfDirectory = resolve(auditDirectory, "pdf");
 
   await Promise.all([
     mkdir(screenshotsDirectory, { recursive: true }),
     mkdir(jsonDirectory, { recursive: true }),
     mkdir(htmlDirectory, { recursive: true }),
     mkdir(markdownDirectory, { recursive: true }),
+    mkdir(pdfDirectory, { recursive: true }),
   ]);
 
   return {
@@ -74,6 +77,7 @@ export async function createAuditOutputDirectories(
     jsonDirectory,
     htmlDirectory,
     markdownDirectory,
+    pdfDirectory,
   };
 }
 

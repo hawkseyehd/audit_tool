@@ -301,3 +301,9 @@ export {
   writeHtmlReport,
 } from "./reports/html-report.js";
 export { generateJsonReport, writeJsonReport } from "./reports/json-report.js";
+export {
+  renderPdfWithPlaywright,
+  writePdfReport,
+  type PdfRenderer,
+  type PdfRenderRequest,
+} from "./reports/pdf-report.js";

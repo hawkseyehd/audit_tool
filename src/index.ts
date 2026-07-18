@@ -213,3 +213,14 @@ export type {
   UxScanInput,
   UxSnapshotInput,
 } from "./scanners/ux/types.js";
+export {
+  ANALYTICS_PROVIDERS,
+  analyticsPageSnapshotSchema,
+  analyticsProviderSchema,
+  createAnalyticsScanner,
+  extractAnalyticsPageSnapshot,
+  scanAnalytics,
+  type AnalyticsPageSnapshot,
+  type AnalyticsProvider,
+  type AnalyticsScanInput,
+} from "./scanners/analytics/analytics-scanner.js";

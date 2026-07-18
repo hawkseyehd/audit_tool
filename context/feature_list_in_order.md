@@ -536,6 +536,7 @@ This file converts the PRD into an implementation-focused feature list. Build th
 ### 20.1 Report exports
 
 - PDF export.
+- Concise client summary PDF export.
 - HTML report export.
 - Before/after comparison reports.
 

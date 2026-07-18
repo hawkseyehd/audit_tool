@@ -302,8 +302,14 @@ export {
 } from "./reports/html-report.js";
 export { generateJsonReport, writeJsonReport } from "./reports/json-report.js";
 export {
+  renderPdfsWithPlaywright,
   renderPdfWithPlaywright,
   writePdfReport,
+  writePdfReports,
+  writePdfSummaryReport,
+  type PdfBatchRenderer,
+  type PdfReportSelection,
   type PdfRenderer,
   type PdfRenderRequest,
 } from "./reports/pdf-report.js";
+export { generatePdfSummaryReport } from "./reports/pdf-summary-report.js";

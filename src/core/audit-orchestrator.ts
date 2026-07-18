@@ -14,7 +14,7 @@ import {
 import { writeJsonReport } from "../reports/json-report.js";
 import { writeHtmlReport } from "../reports/html-report.js";
 import { writeMarkdownReport } from "../reports/markdown-report.js";
-import { writePdfReport } from "../reports/pdf-report.js";
+import { writePdfReports } from "../reports/pdf-report.js";
 import { runAccessibilityAudits } from "../scanners/accessibility/accessibility-adapter.js";
 import { scanAccessibility } from "../scanners/accessibility/accessibility-scanner.js";
 import {
@@ -70,7 +70,7 @@ export interface AuditOrchestratorDependencies {
   readonly writeHtml?: typeof writeHtmlReport;
   readonly writeJson?: typeof writeJsonReport;
   readonly writeMarkdown?: typeof writeMarkdownReport;
-  readonly writePdf?: typeof writePdfReport;
+  readonly writePdfs?: typeof writePdfReports;
 }
 
 export async function runAuditOrchestration(
@@ -309,10 +309,14 @@ export async function runAuditOrchestration(
         auditResult,
       );
     }
-    if (config.writePdf) {
-      auditResult = await (dependencies.writePdf ?? writePdfReport)(
+    if (config.writePdf || config.writePdfSummary) {
+      auditResult = await (dependencies.writePdfs ?? writePdfReports)(
         directories.pdfDirectory,
         auditResult,
+        {
+          writeFullReport: config.writePdf,
+          writeSummaryReport: config.writePdfSummary,
+        },
       );
     }
     if (config.writeJson) {

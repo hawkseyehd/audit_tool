@@ -7,7 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   auditResultSchema,
   writePdfReport,
+  writePdfReports,
+  writePdfSummaryReport,
   type AuditResult,
+  type PdfBatchRenderer,
   type PdfRenderer,
 } from "../../../src/index.js";
 
@@ -27,6 +30,7 @@ describe("writePdfReport", () => {
     const renderer = vi.fn<PdfRenderer>(async (request) => {
       const html = await readFile(request.htmlPath, "utf8");
       expect(request.auditId).toBe("audit-pdf-report-test");
+      expect(request.documentTitle).toBe("Audit Report");
       expect(request.siteName).toBe("Example Business");
       expect(request.outputPath).toMatch(/\.tmp\.pdf$/u);
       expect(html).toContain('<h1 id="report-title">Audit Report</h1>');
@@ -42,6 +46,65 @@ describe("writePdfReport", () => {
     expect(reportPath).toBe(join(directory, "audit-report.pdf"));
     expect(() => auditResultSchema.parse(writtenResult)).not.toThrow();
     await expect(readFile(reportPath ?? "", "ascii")).resolves.toMatch(/^%PDF-/u);
+    expect(await temporaryArtifacts(directory)).toEqual([]);
+  });
+
+  it("renders full and summary reports in one batch", async () => {
+    const directory = await createTemporaryDirectory();
+    const renderer = vi.fn<PdfBatchRenderer>(async (requests) => {
+      expect(requests).toHaveLength(2);
+      expect(requests.map((request) => request.documentTitle)).toEqual([
+        "Audit Report",
+        "Audit Summary",
+      ]);
+      const html = await Promise.all(
+        requests.map((request) => readFile(request.htmlPath, "utf8")),
+      );
+      expect(html[0]).toContain('<h1 id="report-title">Audit Report</h1>');
+      expect(html[1]).toContain('<h1 id="summary-title">Audit Summary</h1>');
+      await Promise.all(
+        requests.map((request) =>
+          writeFile(request.outputPath, "%PDF-1.7\nreport fixture", "ascii"),
+        ),
+      );
+    });
+
+    const writtenResult = await writePdfReports(
+      directory,
+      resultFixture(),
+      { writeFullReport: true, writeSummaryReport: true },
+      renderer,
+    );
+
+    expect(renderer).toHaveBeenCalledOnce();
+    expect(writtenResult.outputs.pdfReportPath).toBe(join(directory, "audit-report.pdf"));
+    expect(writtenResult.outputs.summaryPdfReportPath).toBe(
+      join(directory, "audit-summary.pdf"),
+    );
+    await expect(readFile(writtenResult.outputs.pdfReportPath ?? "", "ascii")).resolves.toMatch(
+      /^%PDF-/u,
+    );
+    await expect(
+      readFile(writtenResult.outputs.summaryPdfReportPath ?? "", "ascii"),
+    ).resolves.toMatch(/^%PDF-/u);
+    expect(await temporaryArtifacts(directory)).toEqual([]);
+  });
+
+  it("supports writing the summary report by itself", async () => {
+    const directory = await createTemporaryDirectory();
+    const renderer = vi.fn<PdfRenderer>(async (request) => {
+      const html = await readFile(request.htmlPath, "utf8");
+      expect(request.documentTitle).toBe("Audit Summary");
+      expect(html).toContain("Audit Summary");
+      await writeFile(request.outputPath, "%PDF-1.7\nsummary fixture", "ascii");
+    });
+
+    const writtenResult = await writePdfSummaryReport(directory, resultFixture(), renderer);
+
+    expect(writtenResult.outputs.pdfReportPath).toBeUndefined();
+    expect(writtenResult.outputs.summaryPdfReportPath).toBe(
+      join(directory, "audit-summary.pdf"),
+    );
     expect(await temporaryArtifacts(directory)).toEqual([]);
   });
 
@@ -65,6 +128,27 @@ describe("writePdfReport", () => {
       "Chromium unavailable",
     );
     expect(await temporaryArtifacts(directory)).toEqual([]);
+  });
+
+  it("does not commit either report when one batched PDF is invalid", async () => {
+    const directory = await createTemporaryDirectory();
+    const renderer: PdfBatchRenderer = async (requests) => {
+      const first = requests[0];
+      const second = requests[1];
+      if (first === undefined || second === undefined) throw new Error("Expected two requests");
+      await writeFile(first.outputPath, "%PDF-1.7\nvalid fixture", "ascii");
+      await writeFile(second.outputPath, "invalid fixture", "ascii");
+    };
+
+    await expect(
+      writePdfReports(
+        directory,
+        resultFixture(),
+        { writeFullReport: true, writeSummaryReport: true },
+        renderer,
+      ),
+    ).rejects.toThrow("valid PDF file");
+    expect(await readdir(directory)).toEqual([]);
   });
 });
 

@@ -34,6 +34,7 @@ describe("executeCli", () => {
         writeJson: true,
         writeMarkdown: true,
         writePdf: true,
+        writePdfSummary: true,
         submitForms: false,
       }),
     );
@@ -71,6 +72,7 @@ describe("executeCli", () => {
       writeJson: true,
       writeMarkdown: false,
       writePdf: false,
+      writePdfSummary: false,
       submitForms: false,
     });
   });
@@ -84,6 +86,7 @@ describe("executeCli", () => {
         outputDirectory: "C:/reports/audit-browser",
         browserInspectionPath: "C:/reports/audit-browser/json/browser-inspection.json",
         pdfReportPath: "C:/reports/audit-browser/pdf/audit-report.pdf",
+        summaryPdfReportPath: "C:/reports/audit-browser/pdf/audit-summary.pdf",
         screenshotDirectory: "C:/reports/audit-browser/screenshots",
       },
     });
@@ -98,6 +101,7 @@ describe("executeCli", () => {
     expect(output).toContain("Audit browser inspection completed: audit-browser");
     expect(output).toContain("Browser inspection:");
     expect(output).toContain("PDF report:");
+    expect(output).toContain("Summary PDF:");
     expect(output).toContain("Screenshots:");
   });
 
@@ -113,6 +117,23 @@ describe("executeCli", () => {
       writeJson: false,
       writeMarkdown: false,
       writePdf: true,
+      writePdfSummary: false,
+    });
+  });
+
+  it("supports selecting the summary PDF as the only report format", async () => {
+    const harness = createHarness();
+    await executeCli(
+      ["node", "website-audit", "audit", "https://example.com", "--summary-pdf"],
+      harness.dependencies,
+    );
+
+    expect(harness.runAudit.mock.calls[0]?.[0]).toMatchObject({
+      writeHtml: false,
+      writeJson: false,
+      writeMarkdown: false,
+      writePdf: false,
+      writePdfSummary: true,
     });
   });
 
@@ -170,6 +191,7 @@ describe("executeCli", () => {
     expect(help).toContain("--json");
     expect(help).toContain("--markdown");
     expect(help).toContain("--pdf");
+    expect(help).toContain("--summary-pdf");
     expect(help).toContain("--no-submit-forms");
   });
 });

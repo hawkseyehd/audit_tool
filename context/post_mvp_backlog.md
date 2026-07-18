@@ -39,6 +39,9 @@ Status: Completed on 2026-07-18.
 Depends on PM-01. Select a deterministic HTML-to-PDF runtime, define page layout, headers,
 footers, link behavior, screenshot handling, font licensing, and visual regression checks.
 
+Client summary extension: Completed on 2026-07-18. Default audits now produce a bounded
+`audit-summary.pdf` for decision-makers alongside the evidence-rich `audit-report.pdf`.
+
 #### PM-03 Before/after comparison engine
 
 Depends on stable audit schemas. Define target identity, rule matching, score deltas, resolved/new/

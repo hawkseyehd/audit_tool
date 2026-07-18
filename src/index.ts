@@ -179,3 +179,20 @@ export type {
   SeoSiteResources,
   SeoSnapshotInput,
 } from "./scanners/seo/types.js";
+export { createFormScanner, scanForms } from "./scanners/forms/form-scanner.js";
+export { extractFormPageSnapshot } from "./scanners/forms/form-snapshot.js";
+export {
+  FORM_KINDS,
+  formFactSchema,
+  formFieldFactSchema,
+  formKindSchema,
+  formPageSnapshotSchema,
+} from "./scanners/forms/schemas.js";
+export type {
+  FormFact,
+  FormFieldFact,
+  FormKind,
+  FormPageSnapshot,
+  FormScanInput,
+  FormSnapshotInput,
+} from "./scanners/forms/types.js";

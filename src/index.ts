@@ -196,3 +196,11 @@ export type {
   FormScanInput,
   FormSnapshotInput,
 } from "./scanners/forms/types.js";
+export { createSecurityScanner, scanSecurity } from "./scanners/security/security-scanner.js";
+export { extractSecurityPageSnapshot } from "./scanners/security/security-snapshot.js";
+export { securityPageSnapshotSchema } from "./scanners/security/schemas.js";
+export type {
+  SecurityPageSnapshot,
+  SecurityScanInput,
+  SecuritySnapshotInput,
+} from "./scanners/security/types.js";

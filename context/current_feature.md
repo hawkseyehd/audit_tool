@@ -1,4 +1,4 @@
-# Current Feature: Form Scanner
+# Current Feature: Security and Privacy Scanner
 
 ## Status
 
@@ -6,52 +6,41 @@ Completed
 
 ## Branch
 
-`feature/form-scanner`
+`feature/security-privacy-scanner`
 
 ## Objective
 
-Detect form and form-like flows from static HTML, assess field quality and submission
-readiness without interacting with the site, and emit evidence-based findings focused on
-accessibility, conversion confidence, and safe implementation basics.
+Assess public HTTPS, response-header, cookie-flag, mixed-content, and privacy signals using
+non-invasive evidence only, then produce carefully scoped findings without claiming a
+penetration test or legal compliance review.
 
 ## Included Scope
 
-- Detect native forms and form controls outside forms.
-- Classify contact, booking, signup, checkout, lead, and generic form intent.
-- Extract bounded, non-sensitive field and form facts without retaining values.
-- Check visible and programmatic labels, placeholder-only fields, required state,
-  semantic input types, and autocomplete attributes.
-- Check submit controls, native-validation bypass, privacy/consent text, and CAPTCHA or
-  anti-spam signals.
-- Aggregate form counts and normalize issues into validated `forms` findings.
-- Preserve the hard safety boundary: no clicks, submissions, uploads, accounts, or payment
-  tests.
+- Capture HTTPS and optional HTTP-to-HTTPS redirect evidence.
+- Check mixed-content references in HTTPS page markup.
+- Check HSTS, CSP, content-type protection, frame protection, referrer policy, and
+  permissions policy.
+- Parse discrete Set-Cookie headers and check Secure, HttpOnly, and SameSite flags.
+- Detect privacy-policy links and common consent-interface signals.
+- Emit deterministic, schema-valid security and privacy findings with limitations.
 
 ## Excluded Scope
 
-- Submitting any form or synthetic data.
-- Testing server-side delivery, payment processing, authentication, or CAPTCHA completion.
-- JavaScript-only controls not represented in supplied DOM evidence.
-- Legal conclusions about consent or privacy compliance.
+- Penetration testing, vulnerability exploitation, port scanning, or payload injection.
+- Authentication bypass, paywall testing, or access-control testing.
+- TLS cipher/certificate-chain analysis beyond observed HTTPS use.
+- Legal conclusions about privacy or cookie compliance.
 
 ## Acceptance Criteria
 
-- Extraction is bounded and never stores field values.
-- Native forms and orphan controls are counted.
-- Common conversion-flow types are classified deterministically.
-- Label, type, autocomplete, submit, validation, privacy, and anti-spam checks are covered.
-- Payment, account, upload, and other sensitive flows are never exercised.
-- Findings include severity, business impact, recommendation, URL, and selector evidence.
-- Finding IDs and ordering are deterministic and schema-valid.
-- Tests use static fixtures and prove field values are not retained.
+- Scanner remains read-only and public-safe.
+- Header matching is case-insensitive and evidence-based.
+- Cookie values are never retained in snapshots or findings.
+- Mixed-content evidence is bounded.
+- Missing headers account for equivalent frame protection in CSP.
+- Findings explain automated-audit limitations and avoid absolute compliance claims.
+- Tests use controlled headers and HTML fixtures.
 - All project quality and dependency gates pass.
-
-## Verification Plan
-
-1. Run extraction tests for form types, fields, labels, and safety boundaries.
-2. Run each finding rule against focused fixtures.
-3. Run formatting, linting, strict type checking, and the full test suite.
-4. Run exact npm build, dependency compatibility, and production security checks.
 
 ## History
 
@@ -62,13 +51,11 @@ accessibility, conversion confidence, and safe implementation basics.
 - 2026-07-18: Page Classification completed in commit `aa092f7`.
 - 2026-07-18: Browser Inspection and Evidence completed in commit `13ef0bd`.
 - 2026-07-18: SEO Scanner completed in commit `b0ba224`.
-- 2026-07-18: Form Scanner documented and started.
-- 2026-07-18: Added bounded, value-free extraction for native forms, orphan controls,
-  field semantics, label state, required/autocomplete state, and form readiness signals.
-- 2026-07-18: Added deterministic classification for contact, booking, signup, checkout,
-  lead, and generic flows.
-- 2026-07-18: Implemented schema-validated findings for labels, placeholders, input types,
-  autocomplete, submit controls, validation bypass, privacy, anti-spam, and sensitive-flow
-  manual-review limitations without submitting any data.
-- 2026-07-18: Verified repository formatting, linting, strict type checking, 148 tests,
+- 2026-07-18: Form Scanner completed in commit `f5d3c96`.
+- 2026-07-18: Security and Privacy Scanner documented and started.
+- 2026-07-18: Added bounded HTTPS, response-header, cookie-flag, mixed-content, privacy-link,
+  and consent-signal extraction that never retains cookie values.
+- 2026-07-18: Implemented deterministic security and privacy findings with CSP frame-policy
+  equivalence and explicit non-invasive, non-compliance limitations.
+- 2026-07-18: Verified repository formatting, linting, strict type checking, 152 tests,
   exact npm build, dependency compatibility, and a clean production dependency audit.

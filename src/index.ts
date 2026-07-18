@@ -284,3 +284,4 @@ export {
   type ScoreCategory,
   type ScoreCategoryScores,
 } from "./scoring/scoring-engine.js";
+export { generateMarkdownReport, writeMarkdownReport } from "./reports/markdown-report.js";

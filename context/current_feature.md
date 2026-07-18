@@ -1,4 +1,4 @@
-# Current Feature: Testing and QA
+# Current Feature: MVP Acceptance
 
 ## Status
 
@@ -6,48 +6,51 @@ Completed
 
 ## Branch
 
-`feature/testing-qa`
+`feature/mvp-acceptance`
 
 ## Objective
 
-Harden the completed MVP with repeatable local integration coverage, a requirements-based test
-inventory, low-impact public-safe validation, and documented evidence that outputs remain useful
-and partial failures do not terminate an audit.
+Convert the PRD MVP checklist into executable acceptance evidence using one CLI audit command
+against a controlled 10-page same-domain site, then document the final pass/fail decision.
 
 ## Included Scope
 
-- Confirm required URL, config, classification, scanner, scoring, and report unit coverage.
-- Add a controlled local fixture server and real browser/axe orchestration integration test.
-- Validate crawl, screenshots, scanner integration, scoring, Markdown, JSON, and cleanup together.
-- Run one-request crawl checks against five public-safe pages outside the normal test suite.
-- Document validation scope, results, performance, limitations, and regression commands.
-- Re-run all static, test, build, and dependency gates.
+- Run one CLI command through the production command parser and completed audit runner.
+- Crawl and record 10 same-domain fixture pages.
+- Use real Playwright and axe behavior with a deterministic Lighthouse adapter result.
+- Detect form defects and produce evidence-rich normalized findings.
+- Persist and validate Markdown and JSON reports.
+- Record fixture request methods and prove no form submission or POST request occurred.
+- Reference existing partial page/scanner failure tests for graceful-continuation acceptance.
+- Publish a checklist mapping each criterion to executable evidence.
 
 ## Excluded Scope
 
-- Making public websites part of the repeatable automated test suite.
-- Load, penetration, authenticated, destructive, or form-submission testing.
-- Arbitrary public-site Lighthouse runs or claims of third-party site quality.
+- Public-site load, authenticated workflows, active security testing, or real form submission.
+- Post-MVP exports, dashboards, scheduling, advanced modes, or integrations.
+- Release packaging or registry publication.
 
 ## Acceptance Criteria
 
-- Normal tests remain deterministic and depend only on local controlled fixtures.
-- Real Chromium and axe behavior is exercised in a repeatable integration test.
-- Five public-safe targets receive at most one crawl request each during manual validation.
-- Reports remain schema-valid, readable, evidence-rich, and explicit about partial results.
-- Every required QA area has test or documented validation evidence.
+- Every MVP checklist item has passing automated or documented evidence.
+- The CLI acceptance run exits successfully and reports completed lifecycle paths.
+- Exactly 10 same-domain pages are present in the canonical result.
+- Lighthouse and axe findings are present, and form issues are detected.
+- Every finding contains severity, impact, recommendation, and evidence.
+- The fixture receives no POST requests.
+- Both persisted outputs pass their expected validation.
 - All project quality and dependency gates pass.
 
 ## History
 
-- 2026-07-18: Features 1-17 completed through commit `08ff4c2`.
-- 2026-07-18: Testing and QA documented and started.
-- 2026-07-18: Added a controlled two-page fixture site and repeatable integration test covering
-  real Chromium and axe on desktop/mobile, all static scanners, scoring, screenshots, reports,
-  schema validation, sensitive-data exclusion, and cleanup.
-- 2026-07-18: Completed sequential one-page, no-retry crawler validation against five public-safe
-  reference sites; all five returned HTTP 200 with one successful page.
-- 2026-07-18: Documented the automated coverage inventory, local and public-safe results, report
-  review, failure/cleanup evidence, regression commands, and remaining manual review.
-- 2026-07-18: Verified formatting, linting, strict type checking, 192 tests, exact npm build,
+- 2026-07-18: Features 1-18 completed through commit `2b6f2f5`.
+- 2026-07-18: MVP Acceptance documented and started.
+- 2026-07-18: Extended the controlled fixture to 10 prioritized same-domain pages and added
+  request method/path recording without retaining request bodies.
+- 2026-07-18: Added a one-command CLI acceptance test using real crawl, Chromium, axe, all
+  static scanners, deterministic homepage Lighthouse evidence, scoring, and both reports.
+- 2026-07-18: Verified exactly 10 pages, form/accessibility/performance findings, complete
+  finding evidence, valid outputs, and zero POST requests in a 9.6-second focused run.
+- 2026-07-18: Published a criterion-by-criterion MVP acceptance record with a Passed decision.
+- 2026-07-18: Verified formatting, linting, strict type checking, 193 tests, exact npm build,
   and a clean production dependency audit.

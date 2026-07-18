@@ -6,6 +6,8 @@ export {
   type AuditConfig,
   type AuditConfigInput,
 } from "./config/audit-config.js";
+export { executeCli, type CliDependencies, type CliLogger } from "./cli/program.js";
+export { runFoundationAudit, type AuditRunReceipt, type AuditRunner } from "./cli/runner.js";
 export {
   AUDIT_SCHEMA_VERSION,
   EVIDENCE_SOURCES,

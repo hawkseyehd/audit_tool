@@ -18,6 +18,8 @@ describe("parseAuditConfig", () => {
       includeSecurity: true,
       includeUxHeuristics: true,
       includeAnalytics: true,
+      writeJson: true,
+      writeMarkdown: true,
       submitForms: false,
       allowedDomains: [],
       crawlDelayMs: 250,

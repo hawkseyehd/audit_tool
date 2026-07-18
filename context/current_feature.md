@@ -1,4 +1,4 @@
-# Current Feature: Project Foundation
+# Current Feature: CLI Feature Set
 
 ## Status
 
@@ -6,74 +6,63 @@ Completed
 
 ## Branch
 
-`feature/project-foundation`
+`feature/cli`
 
 ## Objective
 
-Create the production-quality Node.js and TypeScript foundation required by every later Website Audit Tool feature.
+Provide the `website-audit audit <url>` command, validate its options through the
+canonical audit configuration, and connect it to an injectable audit runner that later
+features can replace with the full orchestrator.
 
 ## Included Scope
 
-- Initialize the package, strict TypeScript, source, test, fixture, and report structure.
-- Add build, development, formatting, linting, type-checking, and test commands.
-- Add the PRD's core runtime dependencies:
-  - Playwright
-  - axe for Playwright
-  - Lighthouse and Chrome Launcher
-  - Cheerio
-  - Zod
-  - Commander
-  - Pino
-- Define validated domain schemas and inferred types for:
-  - `AuditFinding`
-  - `AuditResult`
-  - `ScannedPage`
-  - `AuditSummary`
-  - `AuditConfig`
-  - severity, category, page type, viewport, and scanner types
-- Centralize safe defaults and configuration validation.
-- Create structured logging with sensitive-field redaction.
-- Create collision-resistant audit IDs and audit-specific output directories.
-- Add initial documentation and ignore rules for generated or local artifacts.
+- Add the `website-audit` executable entry point.
+- Add the `audit <url>` command.
+- Support `--max-pages`, `--output`, `--mobile`, `--desktop`, `--json`, `--markdown`,
+  and `--no-submit-forms`.
+- Default to desktop when no viewport flag is supplied.
+- Default to JSON and Markdown when no output-format flag is supplied.
+- Keep form submission disabled in the MVP CLI.
+- Validate all CLI input with Commander and the canonical Zod config schema.
+- Print clear start, initialized/completed, scanned-page, and output-path messages.
+- Return useful exit codes and errors for invalid arguments, invalid configuration, and
+  runner failures.
+- Add a foundation runner that creates a safe audit output workspace without pretending
+  crawling or scanning has occurred.
 
 ## Excluded Scope
 
-- CLI command implementation.
-- URL crawling and page classification logic.
-- Browser navigation and screenshot capture.
-- Scanner implementations.
-- Scoring and report generation.
-- Form submission of any kind.
+- URL normalization beyond configuration validation.
+- Crawling, page classification, browser navigation, screenshots, or scanners.
+- Scoring and report file generation.
+- Form submission enablement.
 
 ## Acceptance Criteria
 
-- The project installs from a committed lockfile.
-- Strict TypeScript compilation succeeds without errors.
-- Formatting and lint checks pass.
-- Unit tests cover configuration defaults, invalid configuration, audit IDs, and output-directory creation.
-- Production build succeeds.
-- `submitForms` always defaults to `false`.
-- Configuration rejects unsafe or out-of-range values.
-- Output paths remain inside the configured output root.
-- Logs redact secrets, authorization data, cookies, and form values.
-- No browser, crawler, scanner, scoring, or reporting behavior is implemented prematurely.
+- `website-audit audit https://example.com` validates and initializes an audit workspace.
+- All required CLI options appear in help output.
+- Invalid URLs and numeric options return exit code 2 with actionable messages.
+- Runtime failures return exit code 1 without exposing stack traces.
+- The runner receives a fully validated `AuditConfig`.
+- Form submission remains `false` for every supported CLI invocation.
+- CLI behavior is covered by focused unit tests.
+- Formatting, linting, type checking, tests, dependency checks, and build pass.
 
 ## Verification Plan
 
-1. Run formatting verification.
-2. Run linting.
-3. Run TypeScript type checking.
-4. Run unit tests.
-5. Run the production build.
+1. Run CLI unit tests and a built-CLI smoke test.
+2. Run formatting verification.
+3. Run linting.
+4. Run strict TypeScript checks.
+5. Run the full test suite.
+6. Run `npm run build`.
 
 ## History
 
-- 2026-07-18: Feature documented and started.
-- 2026-07-18: Implemented the Node.js and strict TypeScript toolchain, canonical domain
-  schemas, validated configuration, structured redacted logging, safe audit IDs, and
-  audit-specific output directories.
-- 2026-07-18: Verified formatting, linting, strict type checking, 27 unit tests, pnpm
-  production build, exact `npm run build`, peer dependency compatibility, and a clean
-  production dependency audit.
-- 2026-07-18: User authorized scoped project commits and continuation to subsequent
-  features.
+- 2026-07-18: Project Foundation completed in commit `ee81681`.
+- 2026-07-18: CLI feature documented and started.
+- 2026-07-18: Implemented the Commander CLI, required flags, validated configuration
+  mapping, structured lifecycle logging, safe foundation runner, and executable entry
+  point.
+- 2026-07-18: Verified 34 tests, linting, formatting, strict type checking, pnpm and npm
+  builds, a built-command smoke test, and a clean production dependency audit.

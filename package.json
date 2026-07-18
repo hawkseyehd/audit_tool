@@ -4,13 +4,16 @@
   "private": true,
   "description": "A professional CLI for evidence-based website audits.",
   "type": "module",
+  "bin": {
+    "website-audit": "./dist/cli/index.js"
+  },
   "engines": {
     "node": ">=22.0.0"
   },
   "packageManager": "pnpm@11.9.0",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/cli/index.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",

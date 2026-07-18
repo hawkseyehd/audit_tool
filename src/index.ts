@@ -151,3 +151,31 @@ export {
   normalizeTargetUrl,
   type UrlPolicyErrorCode,
 } from "./url/normalize-url.js";
+export type { AuditScanner, ScannerContext } from "./scanners/types.js";
+export { createSeoScanner, scanSeo } from "./scanners/seo/seo-scanner.js";
+export { extractSeoPageSnapshot } from "./scanners/seo/seo-snapshot.js";
+export {
+  createSeoSiteResourceFetcher,
+  discoverSeoSiteResources,
+} from "./scanners/seo/site-resources.js";
+export {
+  seoHeadingSchema,
+  seoPageSnapshotSchema,
+  seoSiteResourceSchema,
+  seoSiteResourcesSchema,
+} from "./scanners/seo/schemas.js";
+export type {
+  SeoFetchedResource,
+  SeoHeading,
+  SeoPageSnapshot,
+  SeoResourceConfig,
+  SeoResourceFetcherDependencies,
+  SeoScanInput,
+  SeoScannerDependencies,
+  SeoSiteResource,
+  SeoSiteResourceDependencies,
+  SeoSiteResourceFetcher,
+  SeoSiteResourceFetcherOptions,
+  SeoSiteResources,
+  SeoSnapshotInput,
+} from "./scanners/seo/types.js";

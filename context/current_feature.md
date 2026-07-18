@@ -1,4 +1,4 @@
-# Current Feature: Browser Inspection and Evidence
+# Current Feature: SEO Scanner
 
 ## Status
 
@@ -6,63 +6,63 @@ Completed
 
 ## Branch
 
-`feature/browser-inspection`
+`feature/seo-scanner`
 
 ## Objective
 
-Build a public-safe Playwright inspection layer that loads classified crawl pages in
-explicit desktop and mobile environments, captures bounded runtime errors and viewport
-screenshots, and produces reusable evidence for later scanners.
+Create a deterministic SEO scanner that extracts bounded page facts, checks metadata and
+document structure, verifies public site resources, identifies known broken internal
+links, and emits client-ready findings with concrete evidence.
 
 ## Included Scope
 
-- Launch one headless browser per inspection run and close it in all outcomes.
-- Use a fresh, explicitly configured browser context for every page and viewport.
-- Enforce crawl scope on top-level navigations and public-network safety on all HTTP(S)
-  browser requests.
-- Block downloads, dismiss dialogs, avoid form interaction, and avoid persistent state.
-- Load pages to `domcontentloaded` with configured navigation timeouts.
-- Capture final URL, status, title, console errors, page errors, and duration.
-- Inspect desktop and mobile viewports selected by configuration.
-- Capture viewport screenshots for prioritized pages within a bounded per-viewport budget.
-- Generate sanitized, deterministic, collision-resistant screenshot paths relative to the
-  audit directory.
-- Continue after individual page or viewport failures.
-- Write a validated browser-inspection JSON artifact atomically.
-- Add evidence factories for screenshot, selector, metric, expected, and actual values.
-- Connect browser inspection to the CLI audit lifecycle.
+- Add a shared typed scanner contract for current and future scanners.
+- Extract bounded SEO facts from static HTML without retaining raw page content.
+- Check title presence and length.
+- Check meta-description presence and length.
+- Check canonical-link presence, validity, and origin consistency.
+- Check robots directives on high-value pages.
+- Check H1 count and heading-level progression.
+- Check image alternative-text presence.
+- Check placeholder and non-crawlable internal links.
+- Check JSON-LD structured-data presence and syntax.
+- Fetch `robots.txt` and sitemap candidates with timeouts, redirect scope checks, response
+  bounds, and public-network validation.
+- Detect known broken internal links from crawl status and failure evidence.
+- Convert every issue into a validated SEO `AuditFinding` with severity, impact,
+  recommendation, page URL, and evidence.
 
 ## Excluded Scope
 
-- Clicking controls, submitting forms, uploading files, or creating accounts.
-- Authenticated browser sessions or persisted browser storage.
-- Lighthouse, axe, and scanner-specific findings.
-- Full-page visual regression capture.
-- Final scoring and client-ready reports.
+- Keyword research, backlink analysis, ranking data, or search-console integrations.
+- JavaScript-rendered metadata beyond facts supplied by the browser layer.
+- Deep schema.org semantic validation.
+- External-link crawling.
+- Automatic content rewriting.
+- Final scoring and report rendering.
 
 ## Acceptance Criteria
 
-- Browser, context, and page resources close after success, failure, and cancellation.
-- Desktop and mobile inspections use explicit, isolated context settings.
-- Unsafe subresource requests and out-of-scope main-frame redirects are blocked.
-- Dialogs and downloads cannot interrupt or mutate the audited site.
-- Navigation and runtime errors are bounded, sanitized, and recorded per viewport.
-- One failed inspection does not stop remaining pages or viewports.
-- Screenshots are limited, use safe filenames, and remain inside the audit directory.
-- Screenshot references use portable relative paths.
-- Failed crawler pages are skipped and counted.
-- Inspection output validates against a stable schema.
-- Evidence output validates against the core audit evidence schema.
-- Tests use controlled adapters and local fixtures, never public websites.
+- Page extraction is bounded and never stores complete HTML or user-entered values.
+- All MVP metadata and content-structure checks are implemented.
+- Important pages with `noindex` produce high-severity findings.
+- Missing optional structured data is described without overstating certainty.
+- Site-resource requests remain in scope and reject private-network targets.
+- Redirects are bounded and revalidated.
+- Broken-link findings rely only on known crawl outcomes.
+- Finding IDs and ordering are deterministic.
+- Findings validate against the canonical audit-finding schema.
+- One page or resource failure does not suppress other SEO findings.
+- Tests use HTML fixtures and injected HTTP adapters, never public websites.
 - All project quality and dependency gates pass.
 
 ## Verification Plan
 
-1. Run screenshot-path, evidence, schema, inspector, adapter, writer, and CLI-runner tests.
-2. Run a controlled local Playwright smoke test when a browser runtime is available.
-3. Run formatting, linting, and strict type checking.
-4. Run the full test suite and exact npm build.
-5. Run production dependency and peer checks.
+1. Run snapshot extraction and each page-rule test.
+2. Run resource-discovery, redirect, safety, and response-bound tests.
+3. Run broken-link and finding-schema tests.
+4. Run formatting, linting, strict type checking, and the full test suite.
+5. Run exact npm build, dependency compatibility, and production security checks.
 
 ## History
 
@@ -71,16 +71,14 @@ screenshots, and produces reusable evidence for later scanners.
 - 2026-07-18: URL Normalization and Crawl-Scope Safety completed in commit `3008d18`.
 - 2026-07-18: Same-Domain Crawler completed in commit `ff859c1`.
 - 2026-07-18: Page Classification completed in commit `aa092f7`.
-- 2026-07-18: Browser Inspection and Evidence documented and started.
-- 2026-07-18: Implemented isolated desktop/mobile Playwright contexts, bounded navigation,
-  dialog dismissal, download cancellation, WebSocket blocking, and guaranteed cleanup.
-- 2026-07-18: Added crawl-scope enforcement for top-level browser navigation and
-  public-network validation for all HTTP(S) browser requests.
-- 2026-07-18: Added prioritized viewport screenshots with safe relative paths, bounded
-  runtime errors, stable schemas, evidence factories, and atomic inspection output.
-- 2026-07-18: Connected browser inspection and its artifact paths to the CLI lifecycle.
-- 2026-07-18: Installed and launched Playwright's pinned Chromium runtime and completed a
-  controlled local adapter smoke test covering status, title, errors, dialogs, screenshots,
-  and cleanup.
-- 2026-07-18: Verified repository formatting, linting, strict type checking, 129 tests,
+- 2026-07-18: Browser Inspection and Evidence completed in commit `13ef0bd`.
+- 2026-07-18: SEO Scanner documented and started.
+- 2026-07-18: Added a reusable scanner contract and bounded SEO snapshot extraction for
+  metadata, canonical links, robots directives, headings, images, internal links, and
+  JSON-LD syntax.
+- 2026-07-18: Implemented deterministic page-level SEO rules, known broken-link checks,
+  site-resource checks, stable finding IDs, and schema-validated business-facing findings.
+- 2026-07-18: Added public-safe robots.txt and sitemap discovery with redirect scope,
+  request timeout, response bounds, cancellation, and network-safety enforcement.
+- 2026-07-18: Verified repository formatting, linting, strict type checking, 142 tests,
   exact npm build, dependency compatibility, and a clean production dependency audit.

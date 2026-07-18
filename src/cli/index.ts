@@ -4,7 +4,7 @@ import pino from "pino";
 
 import { createLogger } from "../infrastructure/logger.js";
 import { executeCli } from "./program.js";
-import { runBrowserAudit } from "./runner.js";
+import { runFullAudit } from "./runner.js";
 
 const logger = createLogger({
   destination: pino.destination({ dest: 2, sync: true }),
@@ -12,7 +12,7 @@ const logger = createLogger({
 
 const exitCode = await executeCli(process.argv, {
   logger,
-  runAudit: runBrowserAudit,
+  runAudit: runFullAudit,
   writeError: (message) => process.stderr.write(`${message}\n`),
   writeOut: (message) => process.stdout.write(`${message}\n`),
 });

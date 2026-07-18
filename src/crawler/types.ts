@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type { AuditConfig } from "../config/audit-config.js";
+import type { ScannedPage } from "../core/types.js";
 import type { CrawlScope } from "../url/crawl-scope.js";
 import type { crawlResultSchema, crawlStatsSchema } from "./schemas.js";
 
@@ -19,7 +20,17 @@ export interface FetchedPage {
   readonly body: string;
   readonly contentType: string | null;
   readonly finalUrl: string;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly setCookieHeaders?: readonly string[];
   readonly statusCode: number;
+}
+
+export interface CrawlPageResource {
+  readonly body: string;
+  readonly contentType: string | null;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly page: ScannedPage;
+  readonly setCookieHeaders: readonly string[];
 }
 
 export type PageFetcher = (url: string, options: FetchPageOptions) => Promise<FetchedPage>;
@@ -33,5 +44,6 @@ export interface CrawlDependencies {
 
 export interface CrawlWebsiteOptions {
   readonly config: AuditConfig;
+  readonly onPageFetched?: (resource: CrawlPageResource) => void;
   readonly signal?: AbortSignal;
 }

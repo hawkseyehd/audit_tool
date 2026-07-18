@@ -38,6 +38,7 @@ export const SCANNERS = [
   "security",
   "ux",
   "analytics",
+  "orchestrator",
 ] as const;
 export const EVIDENCE_SOURCES = [
   "lighthouse",

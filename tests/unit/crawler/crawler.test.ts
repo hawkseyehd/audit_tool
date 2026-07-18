@@ -4,6 +4,7 @@ import {
   crawlWebsite,
   PageFetchError,
   parseAuditConfig,
+  type CrawlPageResource,
   type FetchedPage,
   type PageFetcher,
 } from "../../../src/index.js";
@@ -152,6 +153,33 @@ describe("crawlWebsite", () => {
     );
 
     expect(result.pages[0]?.pageType).toBe("auth");
+  });
+
+  it("exposes successful response data in memory without adding it to the crawl result", async () => {
+    const resources: CrawlPageResource[] = [];
+    const config = parseAuditConfig({ targetUrl: "example.com", maxPages: 1, crawlDelayMs: 0 });
+
+    const result = await crawlWebsite(
+      { config, onPageFetched: (resource) => resources.push(resource) },
+      {
+        fetchPage: (url) =>
+          Promise.resolve({
+            ...htmlPage(url, "<title>Captured</title>"),
+            headers: { "content-security-policy": "default-src 'self'" },
+            setCookieHeaders: ["session=secret; Secure; HttpOnly"],
+          }),
+        now: sequentialClock(),
+        sleep: () => Promise.resolve(),
+      },
+    );
+
+    expect(resources[0]).toMatchObject({
+      body: "<title>Captured</title>",
+      headers: { "content-security-policy": "default-src 'self'" },
+      page: { url: "https://example.com/", pageType: "home" },
+    });
+    expect(JSON.stringify(result)).not.toContain("<title>");
+    expect(JSON.stringify(result)).not.toContain("session=secret");
   });
 });
 

@@ -9,6 +9,7 @@ import { scoreUrlPriority } from "./priority.js";
 import { CRAWL_SCHEMA_VERSION, crawlResultSchema } from "./schemas.js";
 import type {
   CrawlDependencies,
+  CrawlPageResource,
   CrawlResult,
   CrawlWebsiteOptions,
   FetchedPage,
@@ -24,6 +25,7 @@ interface QueueEntry {
 interface ProcessedPage {
   readonly links: readonly string[];
   readonly page: ScannedPage;
+  readonly resource?: Omit<CrawlPageResource, "page">;
   readonly rejectionCounts: Readonly<Partial<Record<CrawlRejectionReason, number>>>;
   readonly successful: boolean;
 }
@@ -59,6 +61,9 @@ export async function crawlWebsite(
 
     for (const processed of processedPages) {
       pages.push(processed.page);
+      if (processed.resource !== undefined) {
+        options.onPageFetched?.({ ...processed.resource, page: processed.page });
+      }
       mergeRejectionCounts(rejectionCounts, processed.rejectionCounts);
 
       if (!processed.successful) {
@@ -142,6 +147,12 @@ async function processPage(
         pageType: classification.pageType,
         statusCode: fetchedPage.statusCode,
         ...(extracted.title === undefined ? {} : { title: extracted.title }),
+      },
+      resource: {
+        body: fetchedPage.body,
+        contentType: fetchedPage.contentType,
+        headers: fetchedPage.headers ?? {},
+        setCookieHeaders: fetchedPage.setCookieHeaders ?? [],
       },
       rejectionCounts: extracted.rejectionCounts,
       successful: true,

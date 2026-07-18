@@ -37,6 +37,7 @@ describe("createHttpPageFetcher", () => {
 
     expect(page.finalUrl).toBe("https://example.com/final");
     expect(page.body).toContain("Final");
+    expect(page.headers?.["content-type"]).toContain("text/html");
     expect(checkedUrls).toEqual(["https://example.com/", "https://example.com/final"]);
   });
 

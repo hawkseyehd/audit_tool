@@ -6,6 +6,10 @@ import { writeCrawlResult } from "../crawler/crawl-result-writer.js";
 import { crawlWebsite } from "../crawler/crawler.js";
 import type { CrawlResult } from "../crawler/types.js";
 import { createAuditId, createAuditOutputDirectories } from "../infrastructure/audit-output.js";
+import {
+  runAuditOrchestration,
+  type AuditOrchestratorDependencies,
+} from "../core/audit-orchestrator.js";
 
 export interface AuditRunReceipt {
   readonly status: "initialized" | "crawled" | "inspected" | "completed";
@@ -97,3 +101,28 @@ export function createBrowserAuditRunner(
 }
 
 export const runBrowserAudit = createBrowserAuditRunner();
+
+export function createFullAuditRunner(
+  dependencies: AuditOrchestratorDependencies = {},
+): AuditRunner {
+  return async (config) => {
+    const outcome = await runAuditOrchestration(config, dependencies);
+    return {
+      status: "completed",
+      auditId: outcome.auditResult.auditId,
+      scannedPageCount: outcome.auditResult.scannedPages.length,
+      outputDirectory: outcome.outputDirectory,
+      ...(outcome.auditResult.outputs.markdownReportPath === undefined
+        ? {}
+        : { markdownReportPath: outcome.auditResult.outputs.markdownReportPath }),
+      ...(outcome.auditResult.outputs.jsonReportPath === undefined
+        ? {}
+        : { jsonReportPath: outcome.auditResult.outputs.jsonReportPath }),
+      ...(outcome.auditResult.outputs.screenshotDirectory === undefined
+        ? {}
+        : { screenshotDirectory: outcome.auditResult.outputs.screenshotDirectory }),
+    };
+  };
+}
+
+export const runFullAudit = createFullAuditRunner();

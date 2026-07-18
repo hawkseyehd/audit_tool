@@ -1,4 +1,4 @@
-# Current Feature: URL Normalization and Crawl-Scope Safety
+# Current Feature: Same-Domain Crawler
 
 ## Status
 
@@ -6,67 +6,68 @@ Completed
 
 ## Branch
 
-`feature/url-normalization`
+`feature/crawler`
 
 ## Objective
 
-Create the canonical URL boundary used by the crawler and scanners. It must normalize
-equivalent URLs, reject unsupported or unsafe targets, filter non-page links, and enforce
-the configured crawl scope before network or browser navigation.
+Build a polite, bounded crawler that visits the normalized target, extracts and
+prioritizes safe same-scope links, records page metadata and failures, and writes a stable
+JSON crawl artifact for later classifiers and scanners.
 
 ## Included Scope
 
-- Accept HTTP and HTTPS URLs with or without a protocol.
-- Default missing protocols to HTTPS.
-- Remove fragments and normalize host casing, default ports, path trailing slashes, and
-  query ordering.
-- Preserve root paths and meaningful query values.
-- Deduplicate canonical URLs while preserving discovery order.
-- Resolve relative links against a base page.
-- Reject credentials and unsupported schemes.
-- Reject mail, telephone, JavaScript, data, and file links.
-- Reject downloadable/non-page resources and known social-media destinations.
-- Restrict candidates to the target hostname, matching explicit port, and configured
-  allowed domains.
-- Block localhost, private, loopback, link-local, reserved, multicast, and cloud-metadata
-  destinations through literal-IP and DNS resolution checks.
-- Expose structured rejection reasons for crawler diagnostics.
+- Fetch public HTTP/HTTPS pages with explicit timeouts and a descriptive user agent.
+- Revalidate DNS/network safety before every request and redirect.
+- Follow redirects manually within configured limits and crawl scope.
+- Bound response bodies and parse only HTML/XHTML content.
+- Extract page title and links with Cheerio.
+- Deduplicate canonical URLs before queueing.
+- Respect `maxPages`, concurrency 1-3, crawl delay, retries, and total audit cancellation.
+- Prioritize homepage, contact, pricing, services, products, about, booking, checkout,
+  signup, and login pages.
+- Continue after individual page failures and record safe error metadata.
+- Produce deterministic crawl statistics and rejection counts.
+- Atomically write `crawl-result.json` in the audit JSON output directory.
 
 ## Excluded Scope
 
-- Fetching pages or parsing HTML.
-- Crawl queues, priorities, concurrency, delays, retries, and persistence.
-- Redirect following; later network code must revalidate every redirect with this module.
-- Page classification, browser inspection, and scanners.
+- Page classification beyond temporary `unknown` page types.
+- Playwright/browser rendering and screenshots.
+- Lighthouse, axe, and domain scanners.
+- Scoring and client-ready report generation.
 
 ## Acceptance Criteria
 
-- Equivalent URL forms produce one canonical URL.
-- Fragments never affect deduplication.
-- Relative same-scope page links are accepted.
-- Unsupported, external, social, and downloadable links have explicit rejection reasons.
-- Explicit ports cannot escape the original target scope.
-- Private and sensitive network destinations are rejected before navigation.
-- DNS results are injectable and fully testable without public network access.
-- Unit tests cover normalization, filtering, scope, deduplication, and SSRF boundaries.
+- The starting page is attempted first.
+- No more than `maxPages` pages are attempted.
+- Duplicate, rejected, external, and unsafe URLs never enter the queue.
+- High-value pages are visited before lower-value pages discovered in the same batch.
+- Concurrency never exceeds the validated configuration.
+- Transient failures retry within limits; permanent failures do not.
+- One failed page does not stop the crawl.
+- Redirect destinations are revalidated before fetching.
+- Crawl output validates against a stable schema and is written atomically.
+- Tests use controlled fakes and local response fixtures, never public websites.
 - All project quality and dependency gates pass.
 
 ## Verification Plan
 
-1. Run focused URL and network-safety tests.
-2. Run formatting and linting.
-3. Run strict TypeScript checks.
-4. Run the full test suite.
-5. Run `npm run build`.
-6. Run production dependency and peer checks.
+1. Run crawler, extractor, HTTP adapter, priority, and output-writer tests.
+2. Run formatting, linting, and strict type checking.
+3. Run the full test suite.
+4. Run `npm run build`.
+5. Run production dependency and peer checks.
 
 ## History
 
 - 2026-07-18: Project Foundation completed in commit `ee81681`.
 - 2026-07-18: CLI Feature Set completed in commit `8eefd54`.
-- 2026-07-18: URL Normalization and Crawl-Scope Safety documented and started.
-- 2026-07-18: Implemented canonical target/discovered URL normalization, stable
-  deduplication, structured crawl-candidate decisions, hostname and port scope, and
-  DNS-injectable public-network enforcement.
-- 2026-07-18: Verified formatting, linting, strict type checking, 73 tests, pnpm and npm
-  builds, peer compatibility, and a clean production dependency audit.
+- 2026-07-18: URL Normalization and Crawl-Scope Safety completed in commit `3008d18`.
+- 2026-07-18: Same-Domain Crawler documented and started.
+- 2026-07-18: Implemented bounded HTTP fetching, redirect revalidation, streamed response
+  limits, Cheerio extraction, deterministic priority batches, retry/backoff, partial
+  failure recording, crawl schemas, and atomic crawl-result output.
+- 2026-07-18: Connected the crawler to the CLI so audit commands persist real crawl
+  metadata and report the attempted-page count.
+- 2026-07-18: Verified formatting, linting, strict type checking, 85 tests, exact npm
+  build, peer compatibility, and a clean production dependency audit.

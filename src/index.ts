@@ -6,8 +6,34 @@ export {
   type AuditConfig,
   type AuditConfigInput,
 } from "./config/audit-config.js";
+export { writeCrawlResult } from "./crawler/crawl-result-writer.js";
+export { crawlWebsite } from "./crawler/crawler.js";
+export { PageFetchError, type PageFetchErrorCode } from "./crawler/errors.js";
+export {
+  createHttpPageFetcher,
+  type HttpPageFetcherDependencies,
+} from "./crawler/http-page-fetcher.js";
+export { extractPageLinks, type ExtractedPage } from "./crawler/link-extractor.js";
+export { scoreUrlPriority } from "./crawler/priority.js";
+export { CRAWL_SCHEMA_VERSION, crawlResultSchema, crawlStatsSchema } from "./crawler/schemas.js";
+export type {
+  CrawlDependencies,
+  CrawlResult,
+  CrawlStats,
+  CrawlWebsiteOptions,
+  FetchedPage,
+  FetchPageOptions,
+  PageFetcher,
+} from "./crawler/types.js";
 export { executeCli, type CliDependencies, type CliLogger } from "./cli/program.js";
-export { runFoundationAudit, type AuditRunReceipt, type AuditRunner } from "./cli/runner.js";
+export {
+  createCrawlerAuditRunner,
+  runCrawlerAudit,
+  runFoundationAudit,
+  type AuditRunReceipt,
+  type AuditRunner,
+  type CrawlRunner,
+} from "./cli/runner.js";
 export {
   AUDIT_SCHEMA_VERSION,
   EVIDENCE_SOURCES,

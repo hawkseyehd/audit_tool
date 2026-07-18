@@ -179,7 +179,12 @@ function parseInteger(value: string): number {
 }
 
 function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): void {
-  const lifecycle = receipt.status === "completed" ? "completed" : "initialized";
+  const lifecycle =
+    receipt.status === "completed"
+      ? "completed"
+      : receipt.status === "crawled"
+        ? "crawl completed"
+        : "initialized";
   dependencies.writeOut(`Audit ${lifecycle}: ${receipt.auditId}`);
   dependencies.writeOut(`Scanned pages: ${String(receipt.scannedPageCount)}`);
   dependencies.writeOut(`Output directory: ${receipt.outputDirectory}`);

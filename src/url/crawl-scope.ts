@@ -61,7 +61,9 @@ export type CrawlRejectionReason =
   | "download"
   | "social-media"
   | "external-domain"
-  | "port-mismatch";
+  | "port-mismatch"
+  | "link-limit"
+  | "queue-limit";
 
 export interface CrawlScope {
   readonly targetHostname: string;

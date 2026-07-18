@@ -4,7 +4,13 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { parseAuditConfig, runFoundationAudit } from "../../../src/index.js";
+import {
+  CRAWL_SCHEMA_VERSION,
+  createCrawlerAuditRunner,
+  parseAuditConfig,
+  runFoundationAudit,
+  type CrawlResult,
+} from "../../../src/index.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -30,3 +36,38 @@ describe("runFoundationAudit", () => {
     await expect(access(receipt.outputDirectory)).resolves.toBeUndefined();
   });
 });
+
+describe("createCrawlerAuditRunner", () => {
+  it("writes the crawl artifact and reports the real attempted page count", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "website-audit-crawler-runner-"));
+    temporaryDirectories.push(outputDir);
+    const config = parseAuditConfig({ targetUrl: "example.com", outputDir });
+    const result = createCrawlResult();
+    const runner = createCrawlerAuditRunner(() => Promise.resolve(result));
+
+    const receipt = await runner(config);
+
+    expect(receipt.status).toBe("crawled");
+    expect(receipt.scannedPageCount).toBe(1);
+    expect(receipt.jsonReportPath).toContain("crawl-result.json");
+    await expect(access(receipt.jsonReportPath ?? "missing")).resolves.toBeUndefined();
+  });
+});
+
+function createCrawlResult(): CrawlResult {
+  return {
+    schemaVersion: CRAWL_SCHEMA_VERSION,
+    startedAt: "2026-07-18T10:00:00.000Z",
+    completedAt: "2026-07-18T10:00:01.000Z",
+    targetUrl: "https://example.com/",
+    pages: [{ url: "https://example.com/", pageType: "unknown", statusCode: 200 }],
+    rejectionCounts: {},
+    stats: {
+      attemptedPages: 1,
+      successfulPages: 1,
+      failedPages: 0,
+      discoveredUrls: 1,
+      rejectedLinks: 0,
+    },
+  };
+}

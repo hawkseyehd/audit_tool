@@ -8,6 +8,7 @@ export const AUDIT_LIMITS = {
   crawlDelayMs: { default: 250, max: 60_000, min: 0 },
   maxPages: { default: 15, max: 100, min: 1 },
   maxRedirects: { default: 10, max: 20, min: 0 },
+  maxResponseBytes: { default: 5_000_000, max: 25_000_000, min: 1_024 },
   maxRetries: { default: 2, max: 5, min: 0 },
   navigationTimeoutMs: { default: 30_000, max: 120_000, min: 1_000 },
 } as const;
@@ -90,6 +91,12 @@ export const auditConfigSchema = z
       .min(AUDIT_LIMITS.maxRedirects.min)
       .max(AUDIT_LIMITS.maxRedirects.max)
       .default(AUDIT_LIMITS.maxRedirects.default),
+    maxResponseBytes: z
+      .number()
+      .int()
+      .min(AUDIT_LIMITS.maxResponseBytes.min)
+      .max(AUDIT_LIMITS.maxResponseBytes.max)
+      .default(AUDIT_LIMITS.maxResponseBytes.default),
     maxRetries: z
       .number()
       .int()

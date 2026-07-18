@@ -25,6 +25,7 @@ describe("parseAuditConfig", () => {
       crawlDelayMs: 250,
       concurrency: 2,
       maxRedirects: 10,
+      maxResponseBytes: 5_000_000,
       maxRetries: 2,
     });
   });

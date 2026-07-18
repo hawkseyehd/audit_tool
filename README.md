@@ -13,7 +13,8 @@ into prioritized, client-ready findings.
 - SEO, form, security/privacy, conversion UX, analytics, Lighthouse, and axe scanners.
 - Evidence-rich normalized findings with severity, impact, and recommendations.
 - Weighted category and overall scoring with top-priority fixes.
-- Client-ready A4 PDF, standalone HTML, and Markdown reports, plus stable schema-versioned JSON.
+- Concise client summary PDF, evidence-rich A4 PDF, standalone HTML, and Markdown reports, plus
+  stable schema-versioned JSON.
 - Partial-result handling when an individual page or scanner fails.
 
 ## Requirements
@@ -50,13 +51,14 @@ node dist/cli/index.js audit https://example.com \
   --json \
   --markdown \
   --pdf \
+  --summary-pdf \
   --no-submit-forms
 ```
 
 Use `node dist/cli/index.js audit --help` for the complete command help. When no output-format
-flag is specified, PDF, HTML, JSON, and Markdown are written. Supplying one or more of `--pdf`,
-`--html`, `--json`, or `--markdown` writes only the selected formats. Desktop is the default
-viewport.
+flag is specified, the summary PDF, full PDF, HTML, JSON, and Markdown are written. Supplying one
+or more of `--summary-pdf`, `--pdf`, `--html`, `--json`, or `--markdown` writes only the selected
+formats. Desktop is the default viewport.
 
 ## Output
 
@@ -72,16 +74,19 @@ reports/
     markdown/
       audit-report.md
     pdf/
+      audit-summary.pdf
       audit-report.pdf
     screenshots/
       *.png
 ```
 
-The A4 PDF and standalone HTML report include the complete client report and available audit-local
-screenshot evidence. PDF rendering disables JavaScript, blocks non-local requests, uses no remote
-fonts or assets, and adds page-numbered footers. The JSON artifact is validated against the
-canonical `AuditResult` schema and includes the schema version, target, scanned pages, summary,
-findings, evidence, and output paths.
+`audit-summary.pdf` is a compact decision document with the score, issue landscape, up to six
+priority issues, a 30-day plan, and scope limitations. `audit-report.pdf` and the standalone HTML
+report retain complete findings and available audit-local screenshot evidence. PDF rendering
+disables JavaScript, blocks non-local requests, uses no remote fonts or assets, and adds
+page-numbered footers. The JSON artifact is validated against the canonical `AuditResult` schema
+and includes the schema version, target, scanned pages, summary, findings, evidence, and output
+paths.
 
 ## Development
 

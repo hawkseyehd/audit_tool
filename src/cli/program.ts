@@ -15,6 +15,7 @@ interface AuditCliOptions {
   readonly mobile?: boolean;
   readonly output: string;
   readonly pdf?: boolean;
+  readonly summaryPdf?: boolean;
 }
 
 export interface CliLogger {
@@ -100,6 +101,7 @@ function createProgram(dependencies: CliDependencies): Command {
     .option("--json", "Write structured JSON output")
     .option("--markdown", "Write a Markdown report")
     .option("--pdf", "Write a client-ready A4 PDF report")
+    .option("--summary-pdf", "Write a concise client summary PDF")
     .option("--no-submit-forms", "Explicitly keep form submission disabled")
     .action(async (targetUrl: string, options: AuditCliOptions) => {
       const config = buildAuditConfig(targetUrl, options);
@@ -143,6 +145,7 @@ function buildAuditConfig(targetUrl: string, options: AuditCliOptions): AuditCon
     writeJson: outputFormats.writeJson,
     writeMarkdown: outputFormats.writeMarkdown,
     writePdf: outputFormats.writePdf,
+    writePdfSummary: outputFormats.writePdfSummary,
     submitForms: false,
   });
 }
@@ -165,14 +168,22 @@ function resolveOutputFormats(options: AuditCliOptions): {
   readonly writeJson: boolean;
   readonly writeMarkdown: boolean;
   readonly writePdf: boolean;
+  readonly writePdfSummary: boolean;
 } {
   if (
     options.html !== true &&
     options.json !== true &&
     options.markdown !== true &&
-    options.pdf !== true
+    options.pdf !== true &&
+    options.summaryPdf !== true
   ) {
-    return { writeHtml: true, writeJson: true, writeMarkdown: true, writePdf: true };
+    return {
+      writeHtml: true,
+      writeJson: true,
+      writeMarkdown: true,
+      writePdf: true,
+      writePdfSummary: true,
+    };
   }
 
   return {
@@ -180,6 +191,7 @@ function resolveOutputFormats(options: AuditCliOptions): {
     writeJson: options.json === true,
     writeMarkdown: options.markdown === true,
     writePdf: options.pdf === true,
+    writePdfSummary: options.summaryPdf === true,
   };
 }
 
@@ -217,6 +229,9 @@ function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): 
   }
   if (receipt.pdfReportPath !== undefined) {
     dependencies.writeOut(`PDF report: ${receipt.pdfReportPath}`);
+  }
+  if (receipt.summaryPdfReportPath !== undefined) {
+    dependencies.writeOut(`Summary PDF: ${receipt.summaryPdfReportPath}`);
   }
   if (receipt.browserInspectionPath !== undefined) {
     dependencies.writeOut(`Browser inspection: ${receipt.browserInspectionPath}`);

@@ -75,6 +75,7 @@ describe("full local audit integration", () => {
       expect(outcome.auditResult.outputs.htmlReportPath).toContain("audit-report.html");
       expect(outcome.auditResult.outputs.markdownReportPath).toContain("audit-report.md");
       expect(outcome.auditResult.outputs.pdfReportPath).toContain("audit-report.pdf");
+      expect(outcome.auditResult.outputs.summaryPdfReportPath).toContain("audit-summary.pdf");
       expect(outcome.auditResult.outputs.jsonReportPath).toContain("audit-result.json");
 
       const screenshotPage = outcome.auditResult.scannedPages.find(
@@ -87,12 +88,14 @@ describe("full local audit integration", () => {
       const html = await readFile(outcome.auditResult.outputs.htmlReportPath ?? "", "utf8");
       const markdown = await readFile(outcome.auditResult.outputs.markdownReportPath ?? "", "utf8");
       const pdf = await readFile(outcome.auditResult.outputs.pdfReportPath ?? "");
+      const summaryPdf = await readFile(outcome.auditResult.outputs.summaryPdfReportPath ?? "");
       expect(json).not.toContain("private-fixture-value");
       expect(json).not.toContain("<!doctype html>");
       expect(html).toContain('<h1 id="report-title">Audit Report</h1>');
       expect(html).toContain("Controlled Website Audit Fixture");
       expect(html).toContain("Detailed findings");
       expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+      expect(summaryPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(markdown).toContain("## Recommended 30-Day Action Plan");
       expect(markdown).toContain("## Disclaimer and Audit Limitations");
     } finally {

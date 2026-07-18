@@ -23,6 +23,7 @@ describe("parseAuditConfig", () => {
       writeJson: true,
       writeMarkdown: true,
       writePdf: true,
+      writePdfSummary: true,
       submitForms: false,
       allowedDomains: [],
       crawlDelayMs: 250,

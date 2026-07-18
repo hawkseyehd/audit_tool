@@ -21,8 +21,9 @@ The normal Vitest suite is deterministic and uses local inputs only. It covers:
 - Exact scoring penalties, category weights, clamping, counts, and deterministic priorities.
 - Markdown and HTML escaping, required report sections, partial/empty states, and atomic
   persistence.
-- A4 PDF rendering, output signature validation, disabled JavaScript, blocked non-local renderer
-  requests, temporary-artifact cleanup, and selective/default CLI output behavior.
+- A4 full and summary PDF rendering, output signature validation, disabled JavaScript, blocked
+  non-local renderer requests, temporary-artifact cleanup, batching, and selective/default CLI
+  output behavior.
 - Stable JSON serialization, canonical schema validation, and atomic persistence.
 - Full orchestration, disabled scanners, scanner failures, crawl failures, deadlines, scoring,
   output ordering, and CLI completion receipts.
@@ -74,6 +75,17 @@ footer consistency, tables, evidence, empty space, and final-page behavior. Stru
 confirmed tagged output, no JavaScript, 16 link annotations, non-empty extractable text on every
 page, complete required sections, and the title `Audit Report - Northstar Dental Studio`.
 
+The client summary extension was rendered from a representative audit with eight findings across
+all severities and six highlighted priorities. Poppler rendered all five A4 pages and every page
+was inspected after the final matrix readability adjustment. The final document has consistent
+footers, no clipping, overlap, or blank pages, and clear decision snapshot, issue landscape,
+priority, action plan, scope, and limitation sections. Structural inspection confirmed tagged
+output, no JavaScript, non-empty extractable text on every page, A4 dimensions, and the title
+`Audit Summary - Northstar Digital`.
+
+The final regression suite completed 208 tests across 41 files after the summary extension and
+its long-content bounds were applied.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.
@@ -88,7 +100,7 @@ returned object and contains final output paths.
 - Individual crawl page failures remain in `scannedPages` while the crawl continues.
 - Accessibility and Lighthouse page failures do not stop later pages.
 - Scanner and browser failures become informational operational findings and do not lower score.
-- A crawl failure still produces partial PDF, HTML, Markdown, and JSON reports.
+- A crawl failure still produces partial summary PDF, full PDF, HTML, Markdown, and JSON reports.
 - Audit deadline expiry produces a partial result.
 - Browser contexts, browsers, Lighthouse Chrome, PDF renderer contexts, temporary files, fixture
   servers, and temporary output directories are closed or removed in `finally` paths covered by

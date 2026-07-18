@@ -69,6 +69,7 @@ export const auditConfigSchema = z
     writeJson: z.boolean().default(true),
     writeMarkdown: z.boolean().default(true),
     writePdf: z.boolean().default(true),
+    writePdfSummary: z.boolean().default(true),
     submitForms: z.boolean().default(false),
     allowedDomains: uniqueDomainsSchema.default([]),
     crawlDelayMs: z

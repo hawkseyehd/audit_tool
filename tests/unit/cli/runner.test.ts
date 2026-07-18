@@ -99,6 +99,7 @@ describe("createFullAuditRunner", () => {
       includeAccessibility: false,
       includeLighthouse: false,
       writePdf: false,
+      writePdfSummary: false,
     });
     const runner = createFullAuditRunner({
       createAuditId: () => "audit-full-runner-test",

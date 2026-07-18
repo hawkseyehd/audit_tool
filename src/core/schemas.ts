@@ -133,6 +133,7 @@ export const auditOutputsSchema = z
     htmlReportPath: pathSchema.optional(),
     markdownReportPath: pathSchema.optional(),
     pdfReportPath: pathSchema.optional(),
+    summaryPdfReportPath: pathSchema.optional(),
     jsonReportPath: pathSchema.optional(),
     screenshotDirectory: pathSchema.optional(),
   })

@@ -20,6 +20,7 @@ export interface AuditRunReceipt {
   readonly markdownReportPath?: string;
   readonly jsonReportPath?: string;
   readonly pdfReportPath?: string;
+  readonly summaryPdfReportPath?: string;
   readonly browserInspectionPath?: string;
   readonly screenshotDirectory?: string;
 }
@@ -126,6 +127,9 @@ export function createFullAuditRunner(
       ...(outcome.auditResult.outputs.pdfReportPath === undefined
         ? {}
         : { pdfReportPath: outcome.auditResult.outputs.pdfReportPath }),
+      ...(outcome.auditResult.outputs.summaryPdfReportPath === undefined
+        ? {}
+        : { summaryPdfReportPath: outcome.auditResult.outputs.summaryPdfReportPath }),
       ...(outcome.auditResult.outputs.screenshotDirectory === undefined
         ? {}
         : { screenshotDirectory: outcome.auditResult.outputs.screenshotDirectory }),

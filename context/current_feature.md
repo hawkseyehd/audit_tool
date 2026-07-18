@@ -1,4 +1,4 @@
-# Current Feature: PDF Report Export
+# Current Feature: Client Summary PDF
 
 ## Status
 
@@ -6,55 +6,60 @@ Completed
 
 ## Branch
 
-`feature/pdf-report`
+`feature/pdf-summary-report`
 
 ## Objective
 
-Implement PM-02 as a deterministic, client-ready A4 PDF generated automatically from the approved
-HTML report presentation and complete canonical audit result.
+Add a compact, deterministic `Audit Summary` PDF for client decision-makers while preserving the
+existing evidence-rich `Audit Report` as the technical record.
 
 ## Included Scope
 
-- Add Chromium HTML-to-PDF rendering using the existing Playwright dependency.
-- Generate A4 pages with print backgrounds, client-readable typography, links, and page numbers.
-- Include all report details and available audit-local screenshot evidence.
-- Disable JavaScript and block non-local renderer requests.
-- Bound local navigation time and clean up browser, page, and temporary artifacts on failure.
-- Add a PDF output directory, schema path, configuration option, CLI flag, and receipt output.
-- Write PDF by default alongside HTML, Markdown, and JSON; explicit format flags remain selective.
-- Validate the generated PDF signature and use atomic replacement.
-- Use the project-local Impeccable skill, PDF verification workflow, and report design system.
+- Generate `pdf/audit-summary.pdf` automatically alongside the full report.
+- Keep the summary bounded to a concise 3-5 page target for representative audits.
+- Lead with the website name, overall score, rating, scope, and issue counts.
+- Explain the audit outcome in plain language using canonical scores and finding counts.
+- Show no more than six priority issues with business impact and a recommended next step.
+- Summarize every finding through severity and category counts, including findings not shown in
+  the priority list.
+- Provide a deterministic 30-day action plan and compact scope and limitations statement.
+- Reference `audit-report.pdf` for detailed evidence, affected URLs, screenshots, and remediation.
+- Reuse one secured Playwright session when both PDFs are requested.
+- Add configuration, CLI selection, schemas, orchestration, receipts, tests, and documentation.
+- Use the project-local Impeccable skill and the PDF render-and-inspect verification workflow.
 
 ## Excluded Scope
 
-- Agency branding, custom themes, hosted assets, or interactive report behavior.
-- AI-authored narrative or changes to canonical scoring and finding semantics.
-- PDF signing, encryption, password protection, email delivery, and archival storage.
+- Agency or client branding, custom themes, logos, and hosted assets.
+- AI-authored narrative, inferred business claims, or changes to canonical scoring and findings.
+- Screenshots and complete technical evidence in the summary PDF.
+- PDF signing, encryption, email delivery, and archival storage.
 
 ## Acceptance Criteria
 
-- A complete audit writes `pdf/audit-report.pdf` by default.
-- The PDF title is `Audit Report` and the detected website title is shown, with hostname fallback.
-- Every canonical finding detail and available safe screenshot is represented.
-- A PDF-only CLI run succeeds without retaining an HTML report.
-- PDF generation does not execute audited content or make external network requests.
-- Long URLs and content wrap without clipping, overlap, blank trailing pages, or broken pagination.
-- Every rendered page passes visual inspection at A4 dimensions.
-- CLI selection and default output behavior cover PDF without regressing other report formats.
+- A default audit writes both `pdf/audit-summary.pdf` and `pdf/audit-report.pdf`.
+- `--summary-pdf` writes the summary without retaining full HTML or full PDF output.
+- The title is `Audit Summary` and the detected website title is shown with hostname fallback.
+- The report remains concise regardless of total finding count and clearly accounts for all
+  findings through aggregate counts.
+- Priority issues are deterministic, severity-aware, safely escaped, and capped at six.
+- Empty and partial audit states remain clear and honest.
+- PDF rendering disables JavaScript, blocks non-local requests, validates signatures, and cleans
+  temporary artifacts on failure.
+- Representative pages pass visual inspection at A4 dimensions without clipping, overlap, blank
+  pages, or broken pagination.
 - Unit, integration, formatting, linting, type checking, build, and dependency gates pass.
 
 ## History
 
-- 2026-07-18: PM-01 completed and merged as commit `6447487` on main.
-- 2026-07-18: PM-02 implementation started with the approved neutral A4 report direction.
-- 2026-07-18: Dependency review selected the existing Playwright Chromium runtime; no new package,
-  hosted service, remote asset, licensed font, credential, or retention policy is required.
-- 2026-07-18: Implemented atomic A4 PDF output with disabled JavaScript, blocked non-local
-  renderer requests, tagged output, retained links, audit-local screenshot evidence, and cleanup.
-- 2026-07-18: Added PDF schema, directory, configuration, `--pdf` selection, default output,
-  receipts, orchestration, signature validation, and real browser-backed acceptance coverage.
-- 2026-07-18: Rendered and inspected all 15 pages of a representative client sample. Confirmed
-  A4 dimensions, complete text, 16 link annotations, stable footers, and no blank, clipped, or
-  overlapping content.
-- 2026-07-18: Verified formatting, linting, strict type checking, 201 tests across 40 files, the
+- 2026-07-18: PM-02 full PDF report completed and merged as commit `b1805f9` on main.
+- 2026-07-18: Client summary PDF extension started from the approved report design system.
+- 2026-07-18: Implemented deterministic 3-5 page summary generation, six-issue priority cap,
+  complete issue accounting, plain-language outcome states, 30-day plan, scope, and limitations.
+- 2026-07-18: Added `--summary-pdf`, default output, schema and receipt paths, secured batched PDF
+  rendering, atomic signature validation, cleanup, selective output, and documentation.
+- 2026-07-18: Rendered and inspected all five pages of a representative client sample. Confirmed
+  A4 dimensions, tagged output, no JavaScript, nonblank pages, stable footers, and no clipping,
+  overlap, or broken pagination.
+- 2026-07-18: Verified formatting, linting, strict type checking, 208 tests across 41 files, the
   exact Node 22 production build, and a production dependency audit with no known vulnerabilities.

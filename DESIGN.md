@@ -8,7 +8,8 @@ understand the audit quickly.
 
 ## Identity
 
-- Report title: `Audit Report`.
+- Full report title: `Audit Report`.
+- Client summary title: `Audit Summary`.
 - Site name: the first useful scanned page title; otherwise the target hostname.
 - No logo or agency brand in the first version.
 - A4 is the canonical print format.
@@ -48,6 +49,10 @@ All colored status treatments include a text label and maintain print-readable c
 - Repeated findings are individual bordered records, not nested cards.
 - Dense tables use repeating headers and avoid row splits where practical.
 - Findings, screenshots, and recommendations may flow across pages without fixed-height shells.
+- The client summary uses 3-5 logical pages: decision snapshot, issue landscape, up to two
+  priority pages, and a compact action and scope page.
+- The client summary caps priority issues at six and omits screenshots, selectors, long URLs, and
+  full evidence so the document remains bounded regardless of audit size.
 
 ## Core Components
 
@@ -67,10 +72,15 @@ All colored status treatments include a text label and maintain print-readable c
 - Use explicit empty states for sections with no findings or pages.
 - Use UTC audit timestamps with a human-readable date and time.
 - Keep complete technical details in the client report, even when the executive area is concise.
+- Keep the summary written for general business decision-makers. Use canonical counts, scores,
+  impact, and recommendations without inventing narrative or business claims.
+- Account for every finding in the summary through aggregate category and severity counts, then
+  direct readers to `audit-report.pdf` for complete evidence and remediation detail.
 
 ## Print Behavior
 
 - Print backgrounds are enabled.
 - Links remain visible and clickable.
-- A compact footer shows `Audit Report`, the site name, the audit ID, and `Page X of Y`.
+- A compact footer shows the current document title, the site name, the audit ID, and
+  `Page X of Y`.
 - Avoid orphaned headings, clipped content, blank trailing pages, and split status labels.

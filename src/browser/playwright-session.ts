@@ -52,7 +52,7 @@ async function inspectPage(
 ): Promise<BrowserPageSnapshot> {
   request.signal?.throwIfAborted();
   const context = await browser.newContext(
-    createContextOptions(request.viewport, browser.version()),
+    createBrowserContextOptions(request.viewport, browser.version()),
   );
   context.setDefaultNavigationTimeout(request.timeoutMs);
   context.setDefaultTimeout(request.timeoutMs);
@@ -228,7 +228,10 @@ function isMainFrameNavigation(route: Route, page: Page): boolean {
   return browserRequest.isNavigationRequest() && browserRequest.frame() === page.mainFrame();
 }
 
-function createContextOptions(viewport: Viewport, browserVersion: string): BrowserContextOptions {
+export function createBrowserContextOptions(
+  viewport: Viewport,
+  browserVersion: string,
+): BrowserContextOptions {
   const isMobile = viewport === "mobile";
   const size = isMobile ? { width: 390, height: 844 } : { width: 1_440, height: 900 };
   const chromeVersion = browserVersion.replace(/[^0-9.]/gu, "") || "120.0.0.0";

@@ -1,4 +1,4 @@
-# Current Feature: Lighthouse Performance Scanner
+# Current Feature: Accessibility Scanner
 
 ## Status
 
@@ -6,46 +6,46 @@ Completed
 
 ## Branch
 
-`feature/lighthouse-scanner`
+`feature/accessibility-scanner`
 
 ## Objective
 
-Run bounded, sequential Lighthouse performance audits on prioritized pages and selected
-viewports, normalize core metrics and opportunities, and emit evidence-based findings while
-guaranteeing Chrome cleanup.
+Run bounded axe checks on selected desktop and mobile pages, normalize violations into
+evidence-rich findings, tolerate page failures, and state that automation does not replace
+manual WCAG review.
 
 ## Included Scope
 
-- Prioritize homepage and high-value classified pages.
-- Bound the number of Lighthouse pages and run sequentially for stability.
-- Support mobile and desktop modes.
-- Capture performance score, LCP, CLS, TBT, Speed Index, and FCP.
-- Capture image, render-blocking, unused JavaScript, and unused CSS opportunities.
-- Continue after individual Lighthouse failures and close Chrome in all outcomes.
-- Convert thresholds into validated performance findings.
+- Prioritize successful classified pages and bound scans by the configured page limit.
+- Run isolated desktop and mobile axe checks with one shared browser per audit.
+- Apply crawl-scope and public-network policy to browser requests.
+- Block WebSockets, downloads, and dialogs without interacting with page controls.
+- Continue after page failures and close page contexts and the browser in all outcomes.
+- Normalize axe violations into deterministic, schema-valid findings with bounded selectors.
+- Export the required automated-testing limitation for report generation.
 
 ## Excluded Scope
 
-- Lab metrics presented as field data or guaranteed real-user performance.
-- Unlimited page runs or parallel Lighthouse processes.
-- Persisting full Lighthouse reports in the normalized scanner result.
+- Claims of WCAG conformance or replacement of manual accessibility review.
+- Form submission, authentication, or other state-changing page interactions.
+- Unlimited page scans or concurrent browser contexts.
 
 ## Acceptance Criteria
 
-- Mobile score below 50 creates a high-severity finding.
-- LCP and other metrics use documented lab thresholds.
-- Raw normalized metrics remain available as evidence.
-- Runs are ordered, bounded, cancellable between pages, and failure-tolerant.
-- Chrome closes after success and failure.
+- Axe failures do not stop remaining pages.
+- Violations produce deterministic schema-valid findings with bounded selectors.
+- Desktop and mobile modes are supported and browser resources always close.
+- The manual-review disclaimer is mandatory and exported.
 - All project quality and dependency gates pass.
 
 ## History
 
-- 2026-07-18: Features 1-11 completed through commit `f4d5baf`.
-- 2026-07-18: Lighthouse Performance Scanner documented and started.
-- 2026-07-18: Added bounded, prioritized sequential desktop/mobile Lighthouse execution,
-  normalized metrics and opportunities, partial failures, cancellation, and Chrome cleanup.
-- 2026-07-18: Added threshold-based performance findings and completed a controlled real
-  Lighthouse smoke run with a 99 score and normalized LCP evidence.
-- 2026-07-18: Verified formatting, linting, strict type checking, 165 tests, exact npm
-  build, dependency compatibility, and a clean production dependency audit.
+- 2026-07-18: Features 1-12 completed through commit `4e1942a`.
+- 2026-07-18: Accessibility Scanner documented and started.
+- 2026-07-18: Added prioritized, bounded desktop/mobile axe execution with request safety,
+  per-page failure isolation, cancellation, and guaranteed browser cleanup.
+- 2026-07-18: Added deterministic violation normalization, severity mapping, bounded selector
+  evidence, and the mandatory manual-review disclaimer.
+- 2026-07-18: Verified a real local Playwright/axe run on both viewports, formatting, linting,
+  strict type checking, 171 tests, exact npm build, dependency compatibility, and a clean
+  production dependency audit.

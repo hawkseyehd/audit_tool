@@ -12,6 +12,7 @@
   },
   "packageManager": "pnpm@11.9.0",
   "scripts": {
+    "browser:install": "playwright install chromium",
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/cli/index.ts",
     "format": "prettier --write .",

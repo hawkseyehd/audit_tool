@@ -17,6 +17,34 @@ export {
   getPageScanPriority,
   prioritizePagesForScanning,
 } from "./classifiers/page-scan-priority.js";
+export { inspectPagesWithBrowser } from "./browser/browser-inspector.js";
+export { writeBrowserInspectionResult } from "./browser/browser-result-writer.js";
+export { BrowserInspectionError, type BrowserInspectionErrorCode } from "./browser/errors.js";
+export {
+  createPlaywrightBrowserSession,
+  evaluateBrowserRequestSafety,
+  type BrowserRequestSafetyDecision,
+  type BrowserRequestSafetyInput,
+  type PlaywrightSessionDependencies,
+} from "./browser/playwright-session.js";
+export {
+  BROWSER_INSPECTION_SCHEMA_VERSION,
+  browserInspectionResultSchema,
+  browserInspectionStatsSchema,
+  browserPageInspectionSchema,
+} from "./browser/schemas.js";
+export { createScreenshotTarget, type ScreenshotTarget } from "./browser/screenshot-path.js";
+export type {
+  BrowserInspectionDependencies,
+  BrowserInspectionOptions,
+  BrowserInspectionResult,
+  BrowserInspectionStats,
+  BrowserLauncher,
+  BrowserPageInspection,
+  BrowserPageRequest,
+  BrowserPageSnapshot,
+  BrowserSession,
+} from "./browser/types.js";
 export { writeCrawlResult } from "./crawler/crawl-result-writer.js";
 export { crawlWebsite } from "./crawler/crawler.js";
 export { PageFetchError, type PageFetchErrorCode } from "./crawler/errors.js";
@@ -43,10 +71,14 @@ export type {
 export { executeCli, type CliDependencies, type CliLogger } from "./cli/program.js";
 export {
   createCrawlerAuditRunner,
+  createBrowserAuditRunner,
+  runBrowserAudit,
   runCrawlerAudit,
   runFoundationAudit,
   type AuditRunReceipt,
   type AuditRunner,
+  type BrowserAuditRunnerDependencies,
+  type BrowserInspector,
   type CrawlRunner,
 } from "./cli/runner.js";
 export {
@@ -88,6 +120,11 @@ export type {
   ScannerName,
   Viewport,
 } from "./core/types.js";
+export {
+  createAuditEvidence,
+  createBrowserScreenshotEvidence,
+  type AuditEvidenceInput,
+} from "./evidence/evidence.js";
 export {
   createAuditId,
   createAuditOutputDirectories,

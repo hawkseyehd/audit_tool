@@ -27,6 +27,7 @@ describe("parseAuditConfig", () => {
       maxRedirects: 10,
       maxResponseBytes: 5_000_000,
       maxRetries: 2,
+      maxScreenshotsPerViewport: 10,
     });
   });
 
@@ -86,6 +87,12 @@ describe("parseAuditConfig", () => {
     expect(safeParseAuditConfig({ targetUrl: "example.com", navigationTimeoutMs: 0 }).success).toBe(
       false,
     );
+    expect(
+      safeParseAuditConfig({
+        targetUrl: "example.com",
+        maxScreenshotsPerViewport: AUDIT_LIMITS.maxScreenshotsPerViewport.max + 1,
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects unknown configuration keys", () => {

@@ -71,6 +71,30 @@ describe("executeCli", () => {
     });
   });
 
+  it("prints browser inspection and screenshot artifacts", async () => {
+    const harness = createHarness({
+      receipt: {
+        status: "inspected",
+        auditId: "audit-browser",
+        scannedPageCount: 2,
+        outputDirectory: "C:/reports/audit-browser",
+        browserInspectionPath: "C:/reports/audit-browser/json/browser-inspection.json",
+        screenshotDirectory: "C:/reports/audit-browser/screenshots",
+      },
+    });
+
+    const exitCode = await executeCli(
+      ["node", "website-audit", "audit", "example.com"],
+      harness.dependencies,
+    );
+
+    const output = harness.stdout.join("\n");
+    expect(exitCode).toBe(0);
+    expect(output).toContain("Audit browser inspection completed: audit-browser");
+    expect(output).toContain("Browser inspection:");
+    expect(output).toContain("Screenshots:");
+  });
+
   it("returns exit code 2 for an invalid target", async () => {
     const harness = createHarness();
     const exitCode = await executeCli(
@@ -127,7 +151,9 @@ describe("executeCli", () => {
   });
 });
 
-function createHarness(options: { readonly runnerError?: Error } = {}): {
+function createHarness(
+  options: { readonly receipt?: AuditRunReceipt; readonly runnerError?: Error } = {},
+): {
   readonly dependencies: CliDependencies;
   readonly runAudit: ReturnType<typeof vi.fn<(config: AuditConfig) => Promise<AuditRunReceipt>>>;
   readonly stderr: string[];
@@ -139,7 +165,7 @@ function createHarness(options: { readonly runnerError?: Error } = {}): {
     if (options.runnerError !== undefined) {
       return Promise.reject(options.runnerError);
     }
-    return Promise.resolve(successfulReceipt);
+    return Promise.resolve(options.receipt ?? successfulReceipt);
   });
 
   return {

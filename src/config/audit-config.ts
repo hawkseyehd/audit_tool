@@ -10,6 +10,7 @@ export const AUDIT_LIMITS = {
   maxRedirects: { default: 10, max: 20, min: 0 },
   maxResponseBytes: { default: 5_000_000, max: 25_000_000, min: 1_024 },
   maxRetries: { default: 2, max: 5, min: 0 },
+  maxScreenshotsPerViewport: { default: 10, max: 50, min: 0 },
   navigationTimeoutMs: { default: 30_000, max: 120_000, min: 1_000 },
 } as const;
 
@@ -103,6 +104,12 @@ export const auditConfigSchema = z
       .min(AUDIT_LIMITS.maxRetries.min)
       .max(AUDIT_LIMITS.maxRetries.max)
       .default(AUDIT_LIMITS.maxRetries.default),
+    maxScreenshotsPerViewport: z
+      .number()
+      .int()
+      .min(AUDIT_LIMITS.maxScreenshotsPerViewport.min)
+      .max(AUDIT_LIMITS.maxScreenshotsPerViewport.max)
+      .default(AUDIT_LIMITS.maxScreenshotsPerViewport.default),
   })
   .strict();
 

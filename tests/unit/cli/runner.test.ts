@@ -6,9 +6,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   CRAWL_SCHEMA_VERSION,
+  BROWSER_INSPECTION_SCHEMA_VERSION,
+  createBrowserAuditRunner,
   createCrawlerAuditRunner,
   parseAuditConfig,
   runFoundationAudit,
+  type BrowserInspectionResult,
   type CrawlResult,
 } from "../../../src/index.js";
 
@@ -54,6 +57,32 @@ describe("createCrawlerAuditRunner", () => {
   });
 });
 
+describe("createBrowserAuditRunner", () => {
+  it("writes crawl and browser artifacts and reports inspected lifecycle state", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "website-audit-browser-runner-"));
+    temporaryDirectories.push(outputDir);
+    const config = parseAuditConfig({ targetUrl: "example.com", outputDir });
+    const result = createCrawlResult();
+    const runner = createBrowserAuditRunner({
+      crawl: () => Promise.resolve(result),
+      inspect: (options) => {
+        expect(options.pages).toEqual(result.pages);
+        expect(options.screenshotsDirectory).toContain("screenshots");
+        return Promise.resolve(createBrowserResult());
+      },
+    });
+
+    const receipt = await runner(config);
+
+    expect(receipt.status).toBe("inspected");
+    expect(receipt.scannedPageCount).toBe(1);
+    expect(receipt.jsonReportPath).toContain("crawl-result.json");
+    expect(receipt.browserInspectionPath).toContain("browser-inspection.json");
+    await expect(access(receipt.browserInspectionPath ?? "missing")).resolves.toBeUndefined();
+    await expect(access(receipt.screenshotDirectory ?? "missing")).resolves.toBeUndefined();
+  });
+});
+
 function createCrawlResult(): CrawlResult {
   return {
     schemaVersion: CRAWL_SCHEMA_VERSION,
@@ -68,6 +97,35 @@ function createCrawlResult(): CrawlResult {
       failedPages: 0,
       discoveredUrls: 1,
       rejectedLinks: 0,
+    },
+  };
+}
+
+function createBrowserResult(): BrowserInspectionResult {
+  return {
+    schemaVersion: BROWSER_INSPECTION_SCHEMA_VERSION,
+    startedAt: "2026-07-18T10:00:01.000Z",
+    completedAt: "2026-07-18T10:00:02.000Z",
+    targetUrl: "https://example.com/",
+    pages: [
+      {
+        requestedUrl: "https://example.com/",
+        finalUrl: "https://example.com/",
+        viewport: "desktop",
+        durationMs: 100,
+        consoleErrors: [],
+        pageErrors: [],
+        statusCode: 200,
+      },
+    ],
+    runErrors: [],
+    stats: {
+      sourcePages: 1,
+      skippedPages: 0,
+      attemptedInspections: 1,
+      successfulInspections: 1,
+      failedInspections: 0,
+      screenshotsCaptured: 0,
     },
   };
 }

@@ -182,9 +182,11 @@ function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): 
   const lifecycle =
     receipt.status === "completed"
       ? "completed"
-      : receipt.status === "crawled"
-        ? "crawl completed"
-        : "initialized";
+      : receipt.status === "inspected"
+        ? "browser inspection completed"
+        : receipt.status === "crawled"
+          ? "crawl completed"
+          : "initialized";
   dependencies.writeOut(`Audit ${lifecycle}: ${receipt.auditId}`);
   dependencies.writeOut(`Scanned pages: ${String(receipt.scannedPageCount)}`);
   dependencies.writeOut(`Output directory: ${receipt.outputDirectory}`);
@@ -194,5 +196,11 @@ function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): 
   }
   if (receipt.jsonReportPath !== undefined) {
     dependencies.writeOut(`JSON report: ${receipt.jsonReportPath}`);
+  }
+  if (receipt.browserInspectionPath !== undefined) {
+    dependencies.writeOut(`Browser inspection: ${receipt.browserInspectionPath}`);
+  }
+  if (receipt.screenshotDirectory !== undefined) {
+    dependencies.writeOut(`Screenshots: ${receipt.screenshotDirectory}`);
   }
 }

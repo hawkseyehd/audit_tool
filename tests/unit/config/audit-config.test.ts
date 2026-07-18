@@ -9,6 +9,7 @@ describe("parseAuditConfig", () => {
     expect(config).toMatchObject({
       targetUrl: "example.com",
       maxPages: 15,
+      maxLighthousePages: 3,
       outputDir: "./reports",
       viewports: ["desktop"],
       includeLighthouse: true,

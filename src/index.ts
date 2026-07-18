@@ -224,3 +224,25 @@ export {
   type AnalyticsProvider,
   type AnalyticsScanInput,
 } from "./scanners/analytics/analytics-scanner.js";
+export { runLighthouseAudits } from "./scanners/lighthouse/lighthouse-adapter.js";
+export {
+  createLighthouseScanner,
+  scanLighthouse,
+} from "./scanners/lighthouse/lighthouse-scanner.js";
+export {
+  lighthouseMetricsSchema,
+  lighthouseOpportunitySchema,
+  lighthousePageResultSchema,
+} from "./scanners/lighthouse/schemas.js";
+export type {
+  LighthouseAuditDependencies,
+  LighthouseAuditOptions,
+  LighthouseChrome,
+  LighthouseChromeLauncher,
+  LighthouseMetrics,
+  LighthouseOpportunity,
+  LighthousePageResult,
+  LighthouseRunRequest,
+  LighthouseRunner,
+  LighthouseScanInput,
+} from "./scanners/lighthouse/types.js";

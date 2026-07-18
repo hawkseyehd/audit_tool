@@ -7,6 +7,7 @@ export const AUDIT_LIMITS = {
   concurrency: { default: 2, max: 3, min: 1 },
   crawlDelayMs: { default: 250, max: 60_000, min: 0 },
   maxPages: { default: 15, max: 100, min: 1 },
+  maxLighthousePages: { default: 3, max: 10, min: 1 },
   maxRedirects: { default: 10, max: 20, min: 0 },
   maxResponseBytes: { default: 5_000_000, max: 25_000_000, min: 1_024 },
   maxRetries: { default: 2, max: 5, min: 0 },
@@ -49,6 +50,12 @@ export const auditConfigSchema = z
       .min(AUDIT_LIMITS.maxPages.min)
       .max(AUDIT_LIMITS.maxPages.max)
       .default(AUDIT_LIMITS.maxPages.default),
+    maxLighthousePages: z
+      .number()
+      .int()
+      .min(AUDIT_LIMITS.maxLighthousePages.min)
+      .max(AUDIT_LIMITS.maxLighthousePages.max)
+      .default(AUDIT_LIMITS.maxLighthousePages.default),
     outputDir: z.string().trim().min(1).max(4_096).default("./reports"),
     viewports: uniqueViewportsSchema.default(["desktop"]),
     includeLighthouse: z.boolean().default(true),

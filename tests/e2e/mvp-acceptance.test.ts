@@ -85,9 +85,11 @@ describe("MVP acceptance", () => {
       expect(stdout.join("\n")).toContain("Scanned pages: 10");
 
       const jsonPath = join(outputDir, auditId, "json", "audit-result.json");
+      const htmlPath = join(outputDir, auditId, "html", "audit-report.html");
       const markdownPath = join(outputDir, auditId, "markdown", "audit-report.md");
       const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
       const result = auditResultSchema.parse(persisted);
+      const html = await readFile(htmlPath, "utf8");
       const markdown = await readFile(markdownPath, "utf8");
 
       expect(result.scannedPages).toHaveLength(10);
@@ -108,8 +110,11 @@ describe("MVP acceptance", () => {
         expect(finding.recommendation.length).toBeGreaterThan(0);
         expect(finding.evidence).toBeDefined();
       }
+      expect(result.outputs.htmlReportPath).toBe(htmlPath);
       expect(result.outputs.markdownReportPath).toBe(markdownPath);
       expect(result.outputs.jsonReportPath).toBe(jsonPath);
+      expect(html).toContain("Audit Report");
+      expect(html).toContain("Detailed findings");
       expect(markdown).toContain("# Website Audit Report");
       expect(markdown).toContain("## Findings by Severity");
       expect(site.getRequests().some((request) => request.method === "POST")).toBe(false);

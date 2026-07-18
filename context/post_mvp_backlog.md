@@ -27,6 +27,8 @@ A backlog item is ready for implementation only when it has:
 
 #### PM-01 HTML report export
 
+Status: Completed on 2026-07-18.
+
 Depends on the canonical `AuditResult` and Markdown report semantics. Define accessible HTML
 structure, standalone asset policy, print behavior, escaping, theming, and parity tests.
 

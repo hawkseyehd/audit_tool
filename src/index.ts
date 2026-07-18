@@ -295,4 +295,9 @@ export {
   type ScoreCategoryScores,
 } from "./scoring/scoring-engine.js";
 export { generateMarkdownReport, writeMarkdownReport } from "./reports/markdown-report.js";
+export {
+  generateHtmlReport,
+  resolveReportSiteName,
+  writeHtmlReport,
+} from "./reports/html-report.js";
 export { generateJsonReport, writeJsonReport } from "./reports/json-report.js";

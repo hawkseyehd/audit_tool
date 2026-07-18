@@ -130,6 +130,7 @@ export const auditSummarySchema = z
 
 export const auditOutputsSchema = z
   .object({
+    htmlReportPath: pathSchema.optional(),
     markdownReportPath: pathSchema.optional(),
     jsonReportPath: pathSchema.optional(),
     screenshotDirectory: pathSchema.optional(),

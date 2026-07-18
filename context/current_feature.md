@@ -1,4 +1,4 @@
-# Current Feature: Post-MVP Backlog Finalization
+# Current Feature: HTML Report Export
 
 ## Status
 
@@ -6,47 +6,46 @@ Completed
 
 ## Branch
 
-`feature/post-mvp-backlog`
+`feature/html-report`
 
 ## Objective
 
-Turn the PRD's post-MVP idea list into a sequenced, security-aware backlog with explicit
-dependencies and definition-of-ready gates, and update project documentation to reflect the
-completed MVP accurately.
+Implement PM-01 as a deterministic, accessible, standalone HTML client report that preserves the
+canonical audit semantics and becomes the presentation source for the PDF export.
 
 ## Included Scope
 
-- Catalog every report, dashboard, history, advanced-mode, integration, and narrative idea.
-- Sequence work by dependency and risk rather than implying all ideas are immediately buildable.
-- Define prerequisites, security constraints, and acceptance themes for future feature PRDs.
-- Require Impeccable for future dashboard and other UI work.
-- Update the README with shipped capabilities, setup, CLI usage, outputs, safety, QA, and limits.
+- Add a self-contained HTML report with no external runtime assets.
+- Use semantic, accessible document structure and complete report details.
+- Escape all website and scanner-controlled text before rendering.
+- Add deterministic report ordering, explicit empty states, and print styles.
+- Add an HTML output directory, schema path, configuration option, CLI flag, and receipt output.
+- Preserve the existing default behavior while adding HTML to the default output set.
+- Use the project-local Impeccable skill and documented report design system.
 
 ## Excluded Scope
 
-- Implementing backlog items without dedicated PRDs, UX flows, schemas, credentials, retention
-  policies, provider choices, or item-specific acceptance criteria.
-- Changing the completed MVP schema or CLI behavior.
-- Creating external accounts, delivery credentials, cloud infrastructure, or hosted services.
+- PDF file generation, which remains PM-02 and follows this dependency.
+- Agency branding, custom themes, hosted assets, JavaScript, or interactive dashboard behavior.
+- AI-authored narrative or changes to canonical scoring and finding semantics.
 
 ## Acceptance Criteria
 
-- Every item in Feature 20 is represented in the refined backlog.
-- Future items have stable IDs, dependency order, and definition-of-ready requirements.
-- High-risk authenticated, scheduled, AI, and delivery work has explicit security gates.
-- The README no longer describes completed features as future work.
-- Shipped versus deferred scope is unambiguous.
-- All project quality and dependency gates remain green.
+- A complete audit writes `html/audit-report.html` by default.
+- The HTML is standalone, UTF-8, semantically structured, and usable without network access.
+- Every canonical finding detail and evidence field is represented.
+- Untrusted audited content cannot inject markup, scripts, styles, or report structure.
+- Long URLs and content remain readable in screen and print layouts.
+- CLI selection and default output behavior cover HTML without regressing JSON or Markdown.
+- Unit, integration, formatting, linting, type checking, build, and dependency gates pass.
 
 ## History
 
-- 2026-07-18: Features 1-19 completed through commit `86c8370`; MVP acceptance passed.
-- 2026-07-18: Post-MVP backlog finalization documented and started.
-- 2026-07-18: Refined all 20 post-MVP ideas into stable PM items across five dependency waves,
-  with definition-of-ready, security, privacy, provider, storage, UI, and acceptance gates.
-- 2026-07-18: Required dedicated future PRDs and Impeccable-driven UI work rather than bundling
-  underspecified exports, dashboard, scheduling, authentication, integrations, and AI features.
-- 2026-07-18: Updated the README with shipped capabilities, setup, CLI usage, outputs, safety,
-  limitations, validation records, and the deferred roadmap boundary.
-- 2026-07-18: Verified formatting, linting, strict type checking, 193 tests, exact npm build,
-  and a clean production dependency audit.
+- 2026-07-18: PM-01 approved as the required presentation dependency for client PDF export.
+- 2026-07-18: Neutral report identity, A4 print target, and Impeccable design direction confirmed.
+- 2026-07-18: Implemented standalone semantic HTML with complete findings, deterministic ordering,
+  audit-local screenshots, responsive and print styles, strict escaping, and atomic output writes.
+- 2026-07-18: Added HTML output schema, configuration, CLI selection, receipts, orchestration,
+  integration coverage, and end-to-end acceptance coverage.
+- 2026-07-18: Verified formatting, linting, strict type checking, 197 tests, the exact Node 22
+  production build, and a production dependency audit with no known vulnerabilities.

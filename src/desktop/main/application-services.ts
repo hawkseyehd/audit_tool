@@ -32,9 +32,9 @@ export class ApplicationServices {
     }
   }
 
-  getBootstrap(): DesktopBootstrap {
+  async getBootstrap(): Promise<DesktopBootstrap> {
     const workspace = this.#databaseReady
-      ? this.#database.getWorkspaceSummary()
+      ? await this.#database.getWorkspaceSummary()
       : { audits: 0, clients: 0, prospects: 0, reports: 0 };
 
     return desktopBootstrapSchema.parse({
@@ -50,6 +50,10 @@ export class ApplicationServices {
       },
       workspace,
     });
+  }
+
+  get database(): DesktopDatabaseService {
+    return this.#database;
   }
 
   async close(): Promise<void> {

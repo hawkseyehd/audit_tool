@@ -3,14 +3,27 @@ import path from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 
-import { workspaceSummarySchema, type DesktopBootstrap } from "../shared/contracts.js";
+import {
+  workspaceSummarySchema,
+  type ClientInput,
+  type ClientListQuery,
+  type ClientListResult,
+  type ClientMutationResult,
+  type ClientRecord,
+  type ClientStatus,
+  type DeleteClientResult,
+  type DesktopBootstrap,
+} from "../shared/contracts.js";
+import { CLIENT_SCHEMA_STATEMENTS } from "./client-migrations.js";
+import { ClientRepository } from "./client-repository.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
   #client: PrismaClient | undefined;
+  #clients: ClientRepository | undefined;
   #initializedAt: string | undefined;
 
   constructor(dataDirectory: string) {
@@ -32,12 +45,17 @@ export class DesktopDatabaseService {
         "updatedAt" DATETIME NOT NULL
       )
     `);
+    await this.#client.$executeRawUnsafe("PRAGMA foreign_keys = ON");
+    for (const statement of CLIENT_SCHEMA_STATEMENTS) {
+      await this.#client.$executeRawUnsafe(statement);
+    }
 
     const metadata = await this.#client.appMetadata.upsert({
       create: { id: WORKSPACE_ID, schemaVersion: SCHEMA_VERSION },
       update: { schemaVersion: SCHEMA_VERSION },
       where: { id: WORKSPACE_ID },
     });
+    this.#clients = new ClientRepository(this.#client);
     this.#initializedAt = metadata.createdAt.toISOString();
   }
 
@@ -48,23 +66,52 @@ export class DesktopDatabaseService {
     return this.#initializedAt;
   }
 
-  getWorkspaceSummary(): DesktopBootstrap["workspace"] {
-    this.#requireClient();
-    return workspaceSummarySchema.parse({ audits: 0, clients: 0, prospects: 0, reports: 0 });
+  async getWorkspaceSummary(): Promise<DesktopBootstrap["workspace"]> {
+    return workspaceSummarySchema.parse({
+      audits: 0,
+      clients: await this.#requireClients().count(),
+      prospects: 0,
+      reports: 0,
+    });
+  }
+
+  listClients(query: ClientListQuery): Promise<ClientListResult> {
+    return this.#requireClients().list(query);
+  }
+
+  getClient(id: string): Promise<ClientRecord | null> {
+    return this.#requireClients().get(id);
+  }
+
+  createClient(input: ClientInput): Promise<ClientMutationResult> {
+    return this.#requireClients().create(input);
+  }
+
+  updateClient(id: string, input: ClientInput): Promise<ClientMutationResult> {
+    return this.#requireClients().update(id, input);
+  }
+
+  setClientStatus(id: string, status: ClientStatus): Promise<ClientMutationResult> {
+    return this.#requireClients().setStatus(id, status);
+  }
+
+  deleteClient(id: string, confirmation: string): Promise<DeleteClientResult> {
+    return this.#requireClients().delete(id, confirmation);
   }
 
   async close(): Promise<void> {
     const client = this.#client;
     this.#client = undefined;
+    this.#clients = undefined;
     if (client !== undefined) {
       await client.$disconnect();
     }
   }
 
-  #requireClient(): PrismaClient {
-    if (this.#client === undefined) {
-      throw new Error("Desktop database is unavailable");
+  #requireClients(): ClientRepository {
+    if (this.#clients === undefined) {
+      throw new Error("Client repository is unavailable");
     }
-    return this.#client;
+    return this.#clients;
   }
 }

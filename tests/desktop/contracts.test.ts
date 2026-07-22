@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { desktopBootstrapSchema } from "../../src/desktop/shared/contracts.js";
+import {
+  clientInputSchema,
+  clientListQuerySchema,
+  desktopBootstrapSchema,
+} from "../../src/desktop/shared/contracts.js";
 import { workerRequestSchema } from "../../src/desktop/shared/worker-contracts.js";
 
 const validBootstrap = {
@@ -23,5 +27,23 @@ describe("desktop contracts", () => {
 
   it("rejects worker messages without stable identifiers", () => {
     expect(workerRequestSchema.safeParse({ type: "ping" }).success).toBe(false);
+  });
+
+  it("normalizes optional client fields and applies bounded list defaults", () => {
+    expect(
+      clientInputSchema.parse({
+        businessName: "Northstar",
+        notes: "  ",
+        websiteUrl: "northstar.test",
+      }),
+    ).toMatchObject({ businessName: "Northstar", notes: undefined, tags: [] });
+    expect(clientListQuerySchema.parse({})).toEqual({
+      direction: "desc",
+      page: 1,
+      pageSize: 25,
+      search: "",
+      sort: "updatedAt",
+      status: "active",
+    });
   });
 });

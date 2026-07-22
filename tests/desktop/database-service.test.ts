@@ -24,7 +24,7 @@ describe("DesktopDatabaseService", () => {
     const first = new DesktopDatabaseService(directory);
     await first.initialize();
     const initializedAt = first.initializedAt;
-    expect(first.getWorkspaceSummary()).toEqual({
+    await expect(first.getWorkspaceSummary()).resolves.toEqual({
       audits: 0,
       clients: 0,
       prospects: 0,
@@ -38,8 +38,8 @@ describe("DesktopDatabaseService", () => {
     await reopened.close();
   });
 
-  it("does not expose a summary before initialization", () => {
+  it("does not expose a summary before initialization", async () => {
     const service = new DesktopDatabaseService(path.join(tmpdir(), "unused-audit-tool-database"));
-    expect(() => service.getWorkspaceSummary()).toThrow("unavailable");
+    await expect(service.getWorkspaceSummary()).rejects.toThrow("unavailable");
   });
 });

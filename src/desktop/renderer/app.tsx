@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import type { DesktopBootstrap } from "../shared/contracts.js";
+import { ClientWorkspace } from "./clients/client-workspace.js";
 
 const destinations = [
   { icon: LayoutDashboard, id: "overview", label: "Overview" },
@@ -329,12 +330,14 @@ export function App(): React.JSX.Element {
             <ErrorState message={state.message} onRetry={() => void loadBootstrap()} />
           )}
           {state.type === "ready" && destination === "overview" && <Overview data={state.data} />}
+          {state.type === "ready" && destination === "clients" && <ClientWorkspace />}
           {state.type === "ready" && destination === "settings" && (
             <SettingsView data={state.data} />
           )}
-          {state.type === "ready" && destination !== "overview" && destination !== "settings" && (
-            <EmptyDestination destination={destination} />
-          )}
+          {state.type === "ready" &&
+            destination !== "overview" &&
+            destination !== "clients" &&
+            destination !== "settings" && <EmptyDestination destination={destination} />}
         </div>
       </main>
     </div>

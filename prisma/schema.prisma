@@ -13,3 +13,71 @@ model AppMetadata {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model Client {
+  id           String           @id @default(uuid())
+  businessName String
+  searchText   String
+  status       String           @default("active")
+  publicPhone  String?
+  publicEmail  String?
+  addressLine  String?
+  locality     String?
+  region       String?
+  country      String?
+  postalCode   String?
+  category     String?
+  notes        String?
+  owner        String?
+  archivedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  websites     Website[]
+  tags         ClientTag[]
+  activities   ClientActivity[]
+
+  @@index([status, updatedAt])
+  @@index([searchText])
+}
+
+model Website {
+  id               String   @id @default(uuid())
+  clientId         String
+  url              String
+  normalizedUrl    String
+  normalizedDomain String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model Tag {
+  id             String      @id @default(uuid())
+  name           String
+  normalizedName String      @unique
+  createdAt      DateTime    @default(now())
+  clients        ClientTag[]
+}
+
+model ClientTag {
+  clientId String
+  tagId    String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, tagId])
+  @@index([tagId])
+}
+
+model ClientActivity {
+  id        String   @id @default(uuid())
+  clientId  String
+  kind      String
+  summary   String
+  createdAt DateTime @default(now())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, createdAt])
+}

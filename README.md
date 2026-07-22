@@ -18,6 +18,8 @@ public business websites and turns technical evidence into prioritized, client-r
 - Partial-result handling when an individual page or scanner fails.
 - Secure Electron desktop foundation with a sandboxed React renderer, typed preload API, embedded
   SQLite workspace, isolated utility worker, and Windows packaging.
+- Persistent client directory with normalized domains, search, status filters, lifecycle controls,
+  activity history, and focused client workspaces for pages, audits, and reports.
 
 ## Requirements
 
@@ -44,6 +46,11 @@ pnpm desktop:start
 The desktop application stores writable workspace data below Electron's Windows application-data
 directory. The React renderer has no Node.js, filesystem, Prisma, shell, or raw Electron access.
 All privileged operations cross a purpose-specific, validated preload API.
+
+The Clients workspace stores public business details and internal account context locally. Create
+or edit client records, search by business name or domain, pause or archive inactive accounts,
+and open a client to review its profile and activity. Equivalent website domains resolve to the
+existing client instead of creating duplicates.
 
 Build an unpacked Windows application or a Squirrel installer with:
 

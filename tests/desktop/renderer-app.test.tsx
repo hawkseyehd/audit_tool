@@ -17,6 +17,19 @@ function installApi(api: DesktopApi): void {
   Object.defineProperty(window, "auditTool", { configurable: true, value: api });
 }
 
+function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
+  return {
+    createClient: vi.fn(),
+    deleteClient: vi.fn(),
+    getBootstrap: vi.fn().mockResolvedValue(bootstrap),
+    getClient: vi.fn(),
+    listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
+    setClientStatus: vi.fn(),
+    updateClient: vi.fn(),
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -24,7 +37,7 @@ afterEach(() => {
 
 describe("desktop renderer", () => {
   it("loads real workspace state and navigates with an accessible current item", async () => {
-    installApi({ getBootstrap: vi.fn().mockResolvedValue(bootstrap) });
+    installApi(createApi());
     render(<App />);
 
     expect(screen.getByRole("status", { name: "Loading workspace" })).toBeTruthy();
@@ -33,7 +46,7 @@ describe("desktop renderer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clients" }));
     expect(screen.getByRole("heading", { name: "Clients" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "No clients yet" })).toBeTruthy();
+    expect(await screen.findByText("No active clients")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clients" }).getAttribute("aria-current")).toBe(
       "page",
     );
@@ -44,7 +57,7 @@ describe("desktop renderer", () => {
       .fn<DesktopApi["getBootstrap"]>()
       .mockRejectedValueOnce(new Error("Local services are unavailable"))
       .mockResolvedValueOnce(bootstrap);
-    installApi({ getBootstrap });
+    installApi(createApi({ getBootstrap }));
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Workspace unavailable" })).toBeTruthy();

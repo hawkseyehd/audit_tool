@@ -127,6 +127,25 @@ strict CLI and desktop type checking, the CLI production build, the fused Electr
 the compiled Electron smoke test, and the pnpm production dependency audit all passed. The
 dependency audit reported no known vulnerabilities.
 
+## Client Management Validation
+
+Feature 23 adds repository, contract, database, and renderer coverage for normalized client
+creation, duplicate-domain prevention, tag normalization, search, lifecycle filtering, updates,
+activity history, typed deletion confirmation, empty states, form validation, profile navigation,
+archive actions, and the duplicate-client recovery path.
+
+The compiled Electron application creates or reuses a representative client through the typed
+preload API, opens the client directory, and renders the persisted record from SQLite. Playwright
+captures the directory at 1280 x 820 and 900 x 700. Both images were inspected at full resolution;
+the table, filters, active status, responsive sidebar, typography, whitespace, and row actions are
+clear with no clipping or overlap. The Impeccable layout and type detectors returned no findings.
+
+The complete Feature 23 regression gate passed 231 tests across 47 files. Formatting, zero-warning
+linting, strict CLI and desktop type checking, the CLI production build, Windows x64 Electron
+packaging, and the compiled Electron smoke test all passed. The smoke run reported one persisted
+client and both the database and worker services as ready. The pnpm production dependency audit
+reported no known vulnerabilities.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.

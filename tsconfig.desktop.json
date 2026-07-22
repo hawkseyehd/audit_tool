@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "src/desktop/**/*.ts",
+    "src/desktop/**/*.tsx",
+    "tests/desktop/**/*.ts",
+    "tests/desktop/**/*.tsx"
+  ]
+}

@@ -7,9 +7,11 @@ export default tseslint.config(
     ignores: [
       ".agents/**",
       ".impeccable/**",
+      ".webpack/**",
       "coverage/**",
       "dist/**",
       "node_modules/**",
+      "out/**",
       "reports/**",
     ],
   },
@@ -17,7 +19,7 @@ export default tseslint.config(
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -34,8 +36,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.js"],
+    files: ["**/*.{js,cjs,mjs}"],
     ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      globals: {
+        __dirname: "readonly",
+        module: "readonly",
+        require: "readonly",
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
   },
   prettier,
 );

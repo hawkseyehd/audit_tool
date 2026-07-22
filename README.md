@@ -1,7 +1,7 @@
 # Website Audit Tool
 
-A Node.js and TypeScript CLI that audits public business websites and turns technical evidence
-into prioritized, client-ready findings.
+A Node.js and TypeScript website audit engine with a Windows desktop workspace and CLI. It audits
+public business websites and turns technical evidence into prioritized, client-ready findings.
 
 ## Shipped Capabilities
 
@@ -16,6 +16,8 @@ into prioritized, client-ready findings.
 - Three-page client business summary, concise audit summary, evidence-rich A4 PDF, standalone
   HTML, and Markdown reports, plus stable schema-versioned JSON.
 - Partial-result handling when an individual page or scanner fails.
+- Secure Electron desktop foundation with a sandboxed React renderer, typed preload API, embedded
+  SQLite workspace, isolated utility worker, and Windows packaging.
 
 ## Requirements
 
@@ -30,6 +32,27 @@ pnpm install
 pnpm browser:install
 pnpm build
 ```
+
+## Run The Desktop App
+
+From the project root in PowerShell:
+
+```powershell
+pnpm desktop:start
+```
+
+The desktop application stores writable workspace data below Electron's Windows application-data
+directory. The React renderer has no Node.js, filesystem, Prisma, shell, or raw Electron access.
+All privileged operations cross a purpose-specific, validated preload API.
+
+Build an unpacked Windows application or a Squirrel installer with:
+
+```powershell
+pnpm desktop:package
+pnpm desktop:make
+```
+
+Generated desktop artifacts are written below `out/` and are not committed.
 
 ## Run An Audit
 
@@ -103,6 +126,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm desktop:package
+pnpm desktop:smoke
 pnpm --registry=https://registry.npmjs.org/ audit --prod
 ```
 
@@ -130,6 +155,8 @@ reviews.
 ## Project Records
 
 - Product requirements: `context/PRD.md`
+- Desktop requirements: `context/PRD-2.md`
+- Desktop stack: `context/desktop_app_stack.md`
 - Ordered features: `context/feature_list_in_order.md`
 - Coding standards: `context/conding_standards.md`
 - QA validation: `context/qa_validation.md`

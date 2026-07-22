@@ -2,6 +2,8 @@
 node_modules/
 dist/
 coverage/
+.webpack/
+out/
 
 # Generated audit and test output
 reports/*
@@ -11,6 +13,8 @@ test-results/
 output/
 tmp/
 *.log
+*.db
+*.db-journal
 
 # Local environment files
 .env

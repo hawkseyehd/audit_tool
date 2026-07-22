@@ -104,6 +104,29 @@ and its long-content bounds were applied. Formatting, lint, strict type checking
 production build passed. The pnpm 11 production dependency audit reported no known
 vulnerabilities.
 
+## Desktop Foundation Validation
+
+Feature 22 adds seven focused tests across desktop contracts, SQLite persistence, and the React
+renderer. The database test initializes an application-owned SQLite file, closes it, reopens it,
+and confirms the original workspace metadata is retained. Renderer tests cover loading, ready,
+empty, navigation, service status, failure, and retry behavior through the typed preload contract.
+
+Electron Forge produced an unpacked Windows x64 application with ASAR packaging and security
+fuses. The bundled Electron application was launched through Playwright with the real main,
+preload, renderer, Prisma, SQLite, and utility-process bundles. Both local services reported
+`ready`, the workspace schema was initialized, and the utility worker completed its bounded ping
+handshake and shutdown.
+
+The Impeccable layout and type detectors returned no findings. Playwright screenshots at
+1280 x 820 and 900 x 700 were inspected at full resolution. The standard and compact navigation,
+status labels, content rows, loading treatment, focus targets, typography, clipping, overflow,
+and responsive reflow were visually clean.
+
+The complete Feature 22 regression gate passed 222 tests across 45 files. Formatting, linting,
+strict CLI and desktop type checking, the CLI production build, the fused Electron package,
+the compiled Electron smoke test, and the pnpm production dependency audit all passed. The
+dependency audit reported no known vulnerabilities.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.

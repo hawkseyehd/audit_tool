@@ -1,0 +1,6 @@
+CREATE TABLE "AppMetadata" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "schemaVersion" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);

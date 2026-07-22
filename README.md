@@ -20,6 +20,8 @@ public business websites and turns technical evidence into prioritized, client-r
   SQLite workspace, isolated utility worker, and Windows packaging.
 - Persistent client directory with normalized domains, search, status filters, lifecycle controls,
   activity history, and focused client workspaces for pages, audits, and reports.
+- Safe lightweight website discovery with durable page inventories, classifications, availability,
+  recommendations, rediscovery changes, search, filters, and bounded pagination.
 
 ## Requirements
 
@@ -51,6 +53,10 @@ The Clients workspace stores public business details and internal account contex
 or edit client records, search by business name or domain, pause or archive inactive accounts,
 and open a client to review its profile and activity. Equivalent website domains resolve to the
 existing client instead of creating duplicates.
+
+The Website Pages tab reuses the bounded same-domain crawler without running scanners or browser
+interactions. Each discovery preserves stable page records, reports new and changed pages, marks
+unavailable or no-longer-observed pages, and keeps future audit-selection state intact.
 
 Build an unpacked Windows application or a Squirrel installer with:
 

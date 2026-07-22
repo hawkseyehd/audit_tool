@@ -4,6 +4,8 @@ import {
   clientInputSchema,
   clientListQuerySchema,
   desktopBootstrapSchema,
+  discoverWebsitePagesRequestSchema,
+  websitePageListQuerySchema,
 } from "../../src/desktop/shared/contracts.js";
 import { workerRequestSchema } from "../../src/desktop/shared/worker-contracts.js";
 
@@ -44,6 +46,30 @@ describe("desktop contracts", () => {
       search: "",
       sort: "updatedAt",
       status: "active",
+    });
+  });
+
+  it("bounds discovery jobs and applies strict page-inventory defaults", () => {
+    const clientId = "953c75a4-6293-4fbc-bfe6-595f68368c1c";
+    expect(discoverWebsitePagesRequestSchema.parse({ clientId })).toEqual({
+      clientId,
+      maxPages: 100,
+    });
+    expect(discoverWebsitePagesRequestSchema.safeParse({ clientId, maxPages: 101 }).success).toBe(
+      false,
+    );
+    expect(websitePageListQuerySchema.parse({ clientId })).toEqual({
+      availability: "all",
+      changeState: "all",
+      clientId,
+      direction: "desc",
+      page: 1,
+      pageSize: 25,
+      pageType: "all",
+      search: "",
+      selectionState: "all",
+      sort: "lastObservedAt",
+      status: "all",
     });
   });
 });

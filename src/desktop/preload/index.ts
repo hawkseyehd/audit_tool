@@ -9,10 +9,14 @@ import {
   deleteClientRequestSchema,
   deleteClientResultSchema,
   desktopBootstrapSchema,
+  discoverWebsitePagesRequestSchema,
+  discoveryResultSchema,
   getClientRequestSchema,
   IPC_CHANNELS,
   setClientStatusRequestSchema,
   updateClientRequestSchema,
+  websitePageListQuerySchema,
+  websitePageListResultSchema,
   type DesktopApi,
 } from "../shared/contracts.js";
 
@@ -33,6 +37,12 @@ const desktopApi: DesktopApi = {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getBootstrap);
     return desktopBootstrapSchema.parse(result);
   },
+  async discoverWebsitePages(input) {
+    const request = discoverWebsitePagesRequestSchema.parse(input);
+    return discoveryResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.discoverWebsitePages, request),
+    );
+  },
   async getClient(input) {
     const request = getClientRequestSchema.parse(input);
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getClient, request);
@@ -42,6 +52,12 @@ const desktopApi: DesktopApi = {
     const request = clientListQuerySchema.parse(input);
     return clientListResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.listClients, request),
+    );
+  },
+  async listWebsitePages(input) {
+    const request = websitePageListQuerySchema.parse(input);
+    return websitePageListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listWebsitePages, request),
     );
   },
   async setClientStatus(input) {

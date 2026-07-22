@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Globe,
   Pause,
   Pencil,
   Play,
@@ -14,6 +13,7 @@ import {
   Search,
   Trash2,
   UserRound,
+  type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -25,6 +25,7 @@ import type {
   ClientStatus,
 } from "../../shared/contracts.js";
 import { ClientForm } from "./client-form.js";
+import { WebsitePages } from "./website-pages.js";
 
 const defaultQuery: ClientListQuery = {
   direction: "desc",
@@ -51,7 +52,7 @@ function ClientStatusLabel(props: { status: ClientStatus }): React.JSX.Element {
 }
 
 function EmptyClientSection(props: {
-  icon: typeof Globe;
+  icon: LucideIcon;
   text: string;
   title: string;
 }): React.JSX.Element {
@@ -276,11 +277,7 @@ function ClientDetail(props: {
           </div>
         )}
         {tab === "pages" && (
-          <EmptyClientSection
-            icon={Globe}
-            title="No website pages recorded"
-            text="Run page discovery to build this website inventory."
-          />
+          <WebsitePages clientId={props.client.id} websiteUrl={props.client.websiteUrl} />
         )}
         {tab === "audits" && (
           <EmptyClientSection

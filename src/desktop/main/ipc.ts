@@ -8,10 +8,14 @@ import {
   clientRecordSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
+  discoverWebsitePagesRequestSchema,
+  discoveryResultSchema,
   getClientRequestSchema,
   IPC_CHANNELS,
   setClientStatusRequestSchema,
   updateClientRequestSchema,
+  websitePageListQuerySchema,
+  websitePageListResultSchema,
 } from "../shared/contracts.js";
 import type { ApplicationServices } from "./application-services.js";
 
@@ -70,6 +74,18 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     const request = deleteClientRequestSchema.parse(input);
     return deleteClientResultSchema.parse(
       await services.database.deleteClient(request.id, request.confirmation),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.listWebsitePages, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = websitePageListQuerySchema.parse(input);
+    return websitePageListResultSchema.parse(await services.database.listWebsitePages(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.discoverWebsitePages, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = discoverWebsitePagesRequestSchema.parse(input);
+    return discoveryResultSchema.parse(
+      await services.database.discoverWebsitePages(request.clientId, request.maxPages),
     );
   });
 }

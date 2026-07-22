@@ -13,18 +13,26 @@ import {
   type ClientStatus,
   type DeleteClientResult,
   type DesktopBootstrap,
+  type DiscoveryResult,
+  type WebsitePageListQuery,
+  type WebsitePageListResult,
 } from "../shared/contracts.js";
 import { CLIENT_SCHEMA_STATEMENTS } from "./client-migrations.js";
 import { ClientRepository } from "./client-repository.js";
+import { PageDiscoveryService } from "./page-discovery-service.js";
+import { PageInventoryRepository } from "./page-inventory-repository.js";
+import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
   #client: PrismaClient | undefined;
   #clients: ClientRepository | undefined;
+  #discovery: PageDiscoveryService | undefined;
   #initializedAt: string | undefined;
+  #pages: PageInventoryRepository | undefined;
 
   constructor(dataDirectory: string) {
     this.#dataDirectory = path.resolve(dataDirectory);
@@ -49,6 +57,17 @@ export class DesktopDatabaseService {
     for (const statement of CLIENT_SCHEMA_STATEMENTS) {
       await this.#client.$executeRawUnsafe(statement);
     }
+    for (const statement of PAGE_SCHEMA_STATEMENTS) {
+      await this.#client.$executeRawUnsafe(statement);
+    }
+    await this.#client.discoveryRun.updateMany({
+      data: {
+        completedAt: new Date(),
+        failureMessage: "Discovery was interrupted when the desktop application closed.",
+        status: "failed",
+      },
+      where: { status: "running" },
+    });
 
     const metadata = await this.#client.appMetadata.upsert({
       create: { id: WORKSPACE_ID, schemaVersion: SCHEMA_VERSION },
@@ -56,6 +75,8 @@ export class DesktopDatabaseService {
       where: { id: WORKSPACE_ID },
     });
     this.#clients = new ClientRepository(this.#client);
+    this.#pages = new PageInventoryRepository(this.#client);
+    this.#discovery = new PageDiscoveryService(this.#pages);
     this.#initializedAt = metadata.createdAt.toISOString();
   }
 
@@ -99,10 +120,20 @@ export class DesktopDatabaseService {
     return this.#requireClients().delete(id, confirmation);
   }
 
+  listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult> {
+    return this.#requirePages().list(query);
+  }
+
+  discoverWebsitePages(clientId: string, maxPages: number): Promise<DiscoveryResult> {
+    return this.#requireDiscovery().discover(clientId, maxPages);
+  }
+
   async close(): Promise<void> {
     const client = this.#client;
     this.#client = undefined;
     this.#clients = undefined;
+    this.#discovery = undefined;
+    this.#pages = undefined;
     if (client !== undefined) {
       await client.$disconnect();
     }
@@ -113,5 +144,15 @@ export class DesktopDatabaseService {
       throw new Error("Client repository is unavailable");
     }
     return this.#clients;
+  }
+
+  #requirePages(): PageInventoryRepository {
+    if (this.#pages === undefined) throw new Error("Page inventory repository is unavailable");
+    return this.#pages;
+  }
+
+  #requireDiscovery(): PageDiscoveryService {
+    if (this.#discovery === undefined) throw new Error("Page discovery service is unavailable");
+    return this.#discovery;
   }
 }

@@ -14,11 +14,20 @@
     "forceConsistentCasingInFileNames": true,
     "useUnknownInCatchVariables": true,
     "isolatedModules": true,
+    "jsx": "react-jsx",
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "eslint.config.js", "vitest.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "prisma/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "eslint.config.js",
+    "vitest.config.ts"
+  ],
   "exclude": ["dist", "coverage", "node_modules", "reports"]
 }

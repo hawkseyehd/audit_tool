@@ -10,5 +10,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["tests", "dist", "coverage", "node_modules", "reports"]
+  "exclude": ["src/desktop", "tests", "dist", "coverage", "node_modules", "reports"]
 }

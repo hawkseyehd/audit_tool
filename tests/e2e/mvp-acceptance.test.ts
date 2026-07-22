@@ -83,18 +83,21 @@ describe("MVP acceptance", () => {
       expect(stderr).toEqual([]);
       expect(stdout.join("\n")).toContain("Audit completed: audit-mvp-acceptance");
       expect(stdout.join("\n")).toContain("Scanned pages: 10");
+      expect(stdout.join("\n")).toContain("Client summary PDF:");
       expect(stdout.join("\n")).toContain("PDF report:");
       expect(stdout.join("\n")).toContain("Summary PDF:");
 
       const jsonPath = join(outputDir, auditId, "json", "audit-result.json");
       const htmlPath = join(outputDir, auditId, "html", "audit-report.html");
       const markdownPath = join(outputDir, auditId, "markdown", "audit-report.md");
+      const clientSummaryPdfPath = join(outputDir, auditId, "pdf", "client-summary.pdf");
       const pdfPath = join(outputDir, auditId, "pdf", "audit-report.pdf");
       const summaryPdfPath = join(outputDir, auditId, "pdf", "audit-summary.pdf");
       const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
       const result = auditResultSchema.parse(persisted);
       const html = await readFile(htmlPath, "utf8");
       const markdown = await readFile(markdownPath, "utf8");
+      const clientSummaryPdf = await readFile(clientSummaryPdfPath);
       const pdf = await readFile(pdfPath);
       const summaryPdf = await readFile(summaryPdfPath);
 
@@ -118,6 +121,7 @@ describe("MVP acceptance", () => {
       }
       expect(result.outputs.htmlReportPath).toBe(htmlPath);
       expect(result.outputs.markdownReportPath).toBe(markdownPath);
+      expect(result.outputs.clientSummaryPdfReportPath).toBe(clientSummaryPdfPath);
       expect(result.outputs.pdfReportPath).toBe(pdfPath);
       expect(result.outputs.summaryPdfReportPath).toBe(summaryPdfPath);
       expect(result.outputs.jsonReportPath).toBe(jsonPath);
@@ -125,6 +129,7 @@ describe("MVP acceptance", () => {
       expect(html).toContain("Detailed findings");
       expect(markdown).toContain("# Website Audit Report");
       expect(markdown).toContain("## Findings by Severity");
+      expect(clientSummaryPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(summaryPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(site.getRequests().some((request) => request.method === "POST")).toBe(false);

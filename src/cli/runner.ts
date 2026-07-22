@@ -16,6 +16,7 @@ export interface AuditRunReceipt {
   readonly auditId: string;
   readonly scannedPageCount: number;
   readonly outputDirectory: string;
+  readonly clientSummaryPdfReportPath?: string;
   readonly htmlReportPath?: string;
   readonly markdownReportPath?: string;
   readonly jsonReportPath?: string;
@@ -115,6 +116,9 @@ export function createFullAuditRunner(
       auditId: outcome.auditResult.auditId,
       scannedPageCount: outcome.auditResult.scannedPages.length,
       outputDirectory: outcome.outputDirectory,
+      ...(outcome.auditResult.outputs.clientSummaryPdfReportPath === undefined
+        ? {}
+        : { clientSummaryPdfReportPath: outcome.auditResult.outputs.clientSummaryPdfReportPath }),
       ...(outcome.auditResult.outputs.htmlReportPath === undefined
         ? {}
         : { htmlReportPath: outcome.auditResult.outputs.htmlReportPath }),

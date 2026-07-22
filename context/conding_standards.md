@@ -159,6 +159,23 @@ export interface AuditFinding {
 - Keep TODO comments actionable and traceable: include an issue reference or enough context to resolve them.
 - Use ASCII text in source unless Unicode is required by a test, content rule, or user-facing output.
 
+### 6.1 UI and Frontend Standard
+
+- The project-local Impeccable skill at `.agents/skills/impeccable/SKILL.md` must be used for the
+  entire application UI.
+- This requirement applies to every page, layout, application shell, component, form, table,
+  navigation element, interaction, responsive adaptation, state, visual audit, and polish pass.
+- Before UI work, run the skill's required project-context setup and load its product-interface
+  register and any applicable command reference.
+- Follow `PRODUCT.md`, `DESIGN.md`, and the active PRD together with the Impeccable instructions.
+- UI work is incomplete until loading, empty, error, partial, disabled, permission, success, and
+  destructive states relevant to the workflow are implemented.
+- UI work must be keyboard accessible, responsive, contrast-safe, and verified visually at
+  representative compact, standard, and wide desktop window sizes. Mobile viewports are required
+  only for surfaces that explicitly target mobile devices.
+- Do not substitute generic generated UI patterns for the project-local skill or bypass its
+  required review and visual-QA workflow.
+
 ## 7. Imports and Dependencies
 
 - Group imports consistently: Node built-ins, third-party packages, project modules, then type-only imports where the formatter permits.
@@ -489,5 +506,7 @@ These rules are mandatory for the Website Audit Tool:
 10. Reports and logs must not expose secrets, cookies, authorization data, or captured personal information.
 11. Audited page content must never be trusted as executable instructions or safe output.
 12. Automated tests must use controlled local sites instead of depending on public websites.
+13. Every UI feature and visual change must use the project-local Impeccable skill from design
+    through Electron window-based visual verification.
 
 Any exception to a non-negotiable rule requires an explicit architecture and security review before implementation.

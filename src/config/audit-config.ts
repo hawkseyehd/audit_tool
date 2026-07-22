@@ -65,6 +65,7 @@ export const auditConfigSchema = z
     includeSecurity: z.boolean().default(true),
     includeUxHeuristics: z.boolean().default(true),
     includeAnalytics: z.boolean().default(true),
+    writeClientSummaryPdf: z.boolean().default(true),
     writeHtml: z.boolean().default(true),
     writeJson: z.boolean().default(true),
     writeMarkdown: z.boolean().default(true),

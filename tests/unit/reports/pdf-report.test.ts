@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   auditResultSchema,
+  writeClientSummaryReport,
   writePdfReport,
   writePdfReports,
   writePdfSummaryReport,
@@ -49,19 +50,22 @@ describe("writePdfReport", () => {
     expect(await temporaryArtifacts(directory)).toEqual([]);
   });
 
-  it("renders full and summary reports in one batch", async () => {
+  it("renders the full, audit summary, and client summary reports in one batch", async () => {
     const directory = await createTemporaryDirectory();
     const renderer = vi.fn<PdfBatchRenderer>(async (requests) => {
-      expect(requests).toHaveLength(2);
+      expect(requests).toHaveLength(3);
       expect(requests.map((request) => request.documentTitle)).toEqual([
         "Audit Report",
         "Audit Summary",
+        "Website Improvement Summary",
       ]);
       const html = await Promise.all(
         requests.map((request) => readFile(request.htmlPath, "utf8")),
       );
       expect(html[0]).toContain('<h1 id="report-title">Audit Report</h1>');
       expect(html[1]).toContain('<h1 id="summary-title">Audit Summary</h1>');
+      expect(html[2]).toContain("Website Improvement Summary");
+      expect(requests[2]?.includeAuditId).toBe(false);
       await Promise.all(
         requests.map((request) =>
           writeFile(request.outputPath, "%PDF-1.7\nreport fixture", "ascii"),
@@ -72,7 +76,7 @@ describe("writePdfReport", () => {
     const writtenResult = await writePdfReports(
       directory,
       resultFixture(),
-      { writeFullReport: true, writeSummaryReport: true },
+      { writeClientSummary: true, writeFullReport: true, writeSummaryReport: true },
       renderer,
     );
 
@@ -81,11 +85,17 @@ describe("writePdfReport", () => {
     expect(writtenResult.outputs.summaryPdfReportPath).toBe(
       join(directory, "audit-summary.pdf"),
     );
+    expect(writtenResult.outputs.clientSummaryPdfReportPath).toBe(
+      join(directory, "client-summary.pdf"),
+    );
     await expect(readFile(writtenResult.outputs.pdfReportPath ?? "", "ascii")).resolves.toMatch(
       /^%PDF-/u,
     );
     await expect(
       readFile(writtenResult.outputs.summaryPdfReportPath ?? "", "ascii"),
+    ).resolves.toMatch(/^%PDF-/u);
+    await expect(
+      readFile(writtenResult.outputs.clientSummaryPdfReportPath ?? "", "ascii"),
     ).resolves.toMatch(/^%PDF-/u);
     expect(await temporaryArtifacts(directory)).toEqual([]);
   });
@@ -104,6 +114,27 @@ describe("writePdfReport", () => {
     expect(writtenResult.outputs.pdfReportPath).toBeUndefined();
     expect(writtenResult.outputs.summaryPdfReportPath).toBe(
       join(directory, "audit-summary.pdf"),
+    );
+    expect(await temporaryArtifacts(directory)).toEqual([]);
+  });
+
+  it("supports writing the client business summary by itself", async () => {
+    const directory = await createTemporaryDirectory();
+    const renderer = vi.fn<PdfRenderer>(async (request) => {
+      const html = await readFile(request.htmlPath, "utf8");
+      expect(request.documentTitle).toBe("Website Improvement Summary");
+      expect(request.includeAuditId).toBe(false);
+      expect(html).toContain("Pages reviewed");
+      expect(html).not.toContain("Audit ID");
+      await writeFile(request.outputPath, "%PDF-1.7\nclient summary fixture", "ascii");
+    });
+
+    const writtenResult = await writeClientSummaryReport(directory, resultFixture(), renderer);
+
+    expect(writtenResult.outputs.pdfReportPath).toBeUndefined();
+    expect(writtenResult.outputs.summaryPdfReportPath).toBeUndefined();
+    expect(writtenResult.outputs.clientSummaryPdfReportPath).toBe(
+      join(directory, "client-summary.pdf"),
     );
     expect(await temporaryArtifacts(directory)).toEqual([]);
   });
@@ -144,7 +175,7 @@ describe("writePdfReport", () => {
       writePdfReports(
         directory,
         resultFixture(),
-        { writeFullReport: true, writeSummaryReport: true },
+        { writeClientSummary: false, writeFullReport: true, writeSummaryReport: true },
         renderer,
       ),
     ).rejects.toThrow("valid PDF file");

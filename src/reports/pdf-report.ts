@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 
 import { auditResultSchema } from "../core/schemas.js";
 import type { AuditResult } from "../core/types.js";
+import { generateClientSummaryReport } from "./client-summary-report.js";
 import { generateHtmlReport, resolveReportSiteName } from "./html-report.js";
 import { generatePdfSummaryReport } from "./pdf-summary-report.js";
 
@@ -17,11 +18,13 @@ export interface PdfRenderRequest {
   readonly auditId: string;
   readonly documentTitle: string;
   readonly htmlPath: string;
+  readonly includeAuditId?: boolean;
   readonly outputPath: string;
   readonly siteName: string;
 }
 
 export interface PdfReportSelection {
+  readonly writeClientSummary: boolean;
   readonly writeFullReport: boolean;
   readonly writeSummaryReport: boolean;
 }
@@ -32,6 +35,7 @@ export type PdfBatchRenderer = (requests: readonly PdfRenderRequest[]) => Promis
 interface PdfDocument {
   readonly destinationPath: string;
   readonly documentTitle: string;
+  readonly includeAuditId: boolean;
   readonly temporaryHtmlPath: string;
   readonly temporaryPdfPath: string;
   readonly writeHtml: (result: AuditResult) => string;
@@ -45,7 +49,7 @@ export async function writePdfReport(
   return writePdfReports(
     pdfDirectory,
     auditResult,
-    { writeFullReport: true, writeSummaryReport: false },
+    { writeClientSummary: false, writeFullReport: true, writeSummaryReport: false },
     async (requests) => {
       for (const request of requests) await renderer(request);
     },
@@ -60,7 +64,22 @@ export async function writePdfSummaryReport(
   return writePdfReports(
     pdfDirectory,
     auditResult,
-    { writeFullReport: false, writeSummaryReport: true },
+    { writeClientSummary: false, writeFullReport: false, writeSummaryReport: true },
+    async (requests) => {
+      for (const request of requests) await renderer(request);
+    },
+  );
+}
+
+export async function writeClientSummaryReport(
+  pdfDirectory: string,
+  auditResult: AuditResult,
+  renderer: PdfRenderer = renderPdfWithPlaywright,
+): Promise<AuditResult> {
+  return writePdfReports(
+    pdfDirectory,
+    auditResult,
+    { writeClientSummary: true, writeFullReport: false, writeSummaryReport: false },
     async (requests) => {
       for (const request of requests) await renderer(request);
     },
@@ -74,15 +93,25 @@ export async function writePdfReports(
   renderer: PdfBatchRenderer = renderPdfsWithPlaywright,
 ): Promise<AuditResult> {
   const validatedResult = auditResultSchema.parse(auditResult);
-  if (!selection.writeFullReport && !selection.writeSummaryReport) return validatedResult;
+  if (
+    !selection.writeClientSummary &&
+    !selection.writeFullReport &&
+    !selection.writeSummaryReport
+  ) {
+    return validatedResult;
+  }
 
   const identifier = randomUUID();
+  const clientSummaryPath = resolve(pdfDirectory, "client-summary.pdf");
   const fullReportPath = resolve(pdfDirectory, "audit-report.pdf");
   const summaryReportPath = resolve(pdfDirectory, "audit-summary.pdf");
   const resultWithOutputs = auditResultSchema.parse({
     ...validatedResult,
     outputs: {
       ...validatedResult.outputs,
+      ...(selection.writeClientSummary
+        ? { clientSummaryPdfReportPath: clientSummaryPath }
+        : {}),
       ...(selection.writeFullReport ? { pdfReportPath: fullReportPath } : {}),
       ...(selection.writeSummaryReport ? { summaryPdfReportPath: summaryReportPath } : {}),
     },
@@ -93,6 +122,7 @@ export async function writePdfReports(
     documents.push({
       destinationPath: fullReportPath,
       documentTitle: "Audit Report",
+      includeAuditId: true,
       temporaryHtmlPath: resolve(pdfDirectory, `.audit-report-${identifier}.tmp.html`),
       temporaryPdfPath: resolve(pdfDirectory, `.audit-report-${identifier}.tmp.pdf`),
       writeHtml: generateHtmlReport,
@@ -102,9 +132,20 @@ export async function writePdfReports(
     documents.push({
       destinationPath: summaryReportPath,
       documentTitle: "Audit Summary",
+      includeAuditId: true,
       temporaryHtmlPath: resolve(pdfDirectory, `.audit-summary-${identifier}.tmp.html`),
       temporaryPdfPath: resolve(pdfDirectory, `.audit-summary-${identifier}.tmp.pdf`),
       writeHtml: generatePdfSummaryReport,
+    });
+  }
+  if (selection.writeClientSummary) {
+    documents.push({
+      destinationPath: clientSummaryPath,
+      documentTitle: "Website Improvement Summary",
+      includeAuditId: false,
+      temporaryHtmlPath: resolve(pdfDirectory, `.client-summary-${identifier}.tmp.html`),
+      temporaryPdfPath: resolve(pdfDirectory, `.client-summary-${identifier}.tmp.pdf`),
+      writeHtml: generateClientSummaryReport,
     });
   }
 
@@ -125,6 +166,7 @@ export async function writePdfReports(
         auditId: resultWithOutputs.auditId,
         documentTitle: document.documentTitle,
         htmlPath: document.temporaryHtmlPath,
+        includeAuditId: document.includeAuditId,
         outputPath: document.temporaryPdfPath,
         siteName,
       })),
@@ -209,7 +251,9 @@ export async function renderPdfsWithPlaywright(
 }
 
 function createFooterTemplate(request: PdfRenderRequest): string {
-  return `<div style="box-sizing:border-box;width:100%;padding:0 16mm;color:#5d697a;font-family:Arial,Helvetica,sans-serif;font-size:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:#152033;">${escapeTemplate(request.documentTitle)}</strong> &middot; ${escapeTemplate(request.siteName)} &middot; ${escapeTemplate(request.auditId)} &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`;
+  const auditDetail =
+    request.includeAuditId === false ? "" : ` &middot; ${escapeTemplate(request.auditId)}`;
+  return `<div style="box-sizing:border-box;width:100%;padding:0 16mm;color:#5d697a;font-family:Arial,Helvetica,sans-serif;font-size:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:#152033;">${escapeTemplate(request.documentTitle)}</strong> &middot; ${escapeTemplate(request.siteName)}${auditDetail} &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`;
 }
 
 async function assertPdfFile(path: string): Promise<void> {

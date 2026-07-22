@@ -7,6 +7,7 @@ import type { AuditRunReceipt, AuditRunner } from "./runner.js";
 const CLI_VERSION = "0.1.0";
 
 interface AuditCliOptions {
+  readonly clientSummaryPdf?: boolean;
   readonly desktop?: boolean;
   readonly html?: boolean;
   readonly json?: boolean;
@@ -100,8 +101,9 @@ function createProgram(dependencies: CliDependencies): Command {
     .option("--html", "Write a standalone HTML report")
     .option("--json", "Write structured JSON output")
     .option("--markdown", "Write a Markdown report")
-    .option("--pdf", "Write a client-ready A4 PDF report")
-    .option("--summary-pdf", "Write a concise client summary PDF")
+    .option("--pdf", "Write the full A4 audit PDF")
+    .option("--summary-pdf", "Write the concise audit summary PDF")
+    .option("--client-summary-pdf", "Write the three-page client business summary PDF")
     .option("--no-submit-forms", "Explicitly keep form submission disabled")
     .action(async (targetUrl: string, options: AuditCliOptions) => {
       const config = buildAuditConfig(targetUrl, options);
@@ -141,6 +143,7 @@ function buildAuditConfig(targetUrl: string, options: AuditCliOptions): AuditCon
     maxPages: options.maxPages,
     outputDir: options.output,
     viewports,
+    writeClientSummaryPdf: outputFormats.writeClientSummaryPdf,
     writeHtml: outputFormats.writeHtml,
     writeJson: outputFormats.writeJson,
     writeMarkdown: outputFormats.writeMarkdown,
@@ -164,6 +167,7 @@ function resolveViewports(options: AuditCliOptions): ("desktop" | "mobile")[] {
 }
 
 function resolveOutputFormats(options: AuditCliOptions): {
+  readonly writeClientSummaryPdf: boolean;
   readonly writeHtml: boolean;
   readonly writeJson: boolean;
   readonly writeMarkdown: boolean;
@@ -171,6 +175,7 @@ function resolveOutputFormats(options: AuditCliOptions): {
   readonly writePdfSummary: boolean;
 } {
   if (
+    options.clientSummaryPdf !== true &&
     options.html !== true &&
     options.json !== true &&
     options.markdown !== true &&
@@ -178,6 +183,7 @@ function resolveOutputFormats(options: AuditCliOptions): {
     options.summaryPdf !== true
   ) {
     return {
+      writeClientSummaryPdf: true,
       writeHtml: true,
       writeJson: true,
       writeMarkdown: true,
@@ -187,6 +193,7 @@ function resolveOutputFormats(options: AuditCliOptions): {
   }
 
   return {
+    writeClientSummaryPdf: options.clientSummaryPdf === true,
     writeHtml: options.html === true,
     writeJson: options.json === true,
     writeMarkdown: options.markdown === true,
@@ -229,6 +236,9 @@ function writeReceipt(receipt: AuditRunReceipt, dependencies: CliDependencies): 
   }
   if (receipt.pdfReportPath !== undefined) {
     dependencies.writeOut(`PDF report: ${receipt.pdfReportPath}`);
+  }
+  if (receipt.clientSummaryPdfReportPath !== undefined) {
+    dependencies.writeOut(`Client summary PDF: ${receipt.clientSummaryPdfReportPath}`);
   }
   if (receipt.summaryPdfReportPath !== undefined) {
     dependencies.writeOut(`Summary PDF: ${receipt.summaryPdfReportPath}`);

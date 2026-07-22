@@ -98,6 +98,7 @@ describe("createFullAuditRunner", () => {
       includeAnalytics: false,
       includeAccessibility: false,
       includeLighthouse: false,
+      writeClientSummaryPdf: false,
       writePdf: false,
       writePdfSummary: false,
     });

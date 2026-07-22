@@ -9,7 +9,8 @@ understand the audit quickly.
 ## Identity
 
 - Full report title: `Audit Report`.
-- Client summary title: `Audit Summary`.
+- Audit summary title: `Audit Summary`.
+- Client business summary title: `Website Improvement Summary`.
 - Site name: the first useful scanned page title; otherwise the target hostname.
 - No logo or agency brand in the first version.
 - A4 is the canonical print format.
@@ -49,10 +50,14 @@ All colored status treatments include a text label and maintain print-readable c
 - Repeated findings are individual bordered records, not nested cards.
 - Dense tables use repeating headers and avoid row splits where practical.
 - Findings, screenshots, and recommendations may flow across pages without fixed-height shells.
-- The client summary uses 3-5 logical pages: decision snapshot, issue landscape, up to two
-  priority pages, and a compact action and scope page.
-- The client summary caps priority issues at six and omits screenshots, selectors, long URLs, and
+- The audit summary uses 3-5 logical pages: decision snapshot, issue landscape, up to two priority
+  pages, and a compact action and scope page.
+- The audit summary caps priority issues at six and omits screenshots, selectors, long URLs, and
   full evidence so the document remains bounded regardless of audit size.
+- The client business summary is exactly three logical pages: business snapshot, complete
+  business-impact account, and recommended order of work.
+- The client business summary uses full-width rows and compact status labels. It does not use
+  numbered section scaffolding or decorative side stripes.
 
 ## Core Components
 
@@ -64,6 +69,9 @@ All colored status treatments include a text label and maintain print-readable c
 - Finding record: severity, category, title, URL, description, impact, recommendation, and evidence.
 - Action plan: immediate, near-term, and follow-up phases derived from severity.
 - Limitation panel: automated-review boundaries and manual accessibility disclaimer.
+- Business outcome group: enquiries and conversion, visibility and acquisition, trust and access,
+  or measurement and operations.
+- Client action phases: act now, improve next, and strengthen over time.
 
 ## Content Rules
 
@@ -71,16 +79,22 @@ All colored status treatments include a text label and maintain print-readable c
 - Preserve canonical scores and finding meaning; presentation cannot invent or reinterpret data.
 - Use explicit empty states for sections with no findings or pages.
 - Use UTC audit timestamps with a human-readable date and time.
-- Keep complete technical details in the client report, even when the executive area is concise.
-- Keep the summary written for general business decision-makers. Use canonical counts, scores,
+- Keep complete technical details in the full audit report, even when its executive area is
+  concise.
+- Keep both summaries written for general business decision-makers. Use canonical counts, scores,
   impact, and recommendations without inventing narrative or business claims.
-- Account for every finding in the summary through aggregate category and severity counts, then
-  direct readers to `audit-report.pdf` for complete evidence and remediation detail.
+- Account for every finding in the audit summary through aggregate category and severity counts,
+  then direct readers to `audit-report.pdf` for complete evidence and remediation detail.
+- Account for every finding exactly once in the client business summary through deterministic
+  business-outcome groups.
+- In the client business summary, retain only pages reviewed as a scope signal. Omit audit IDs,
+  dates, durations, scanner names, evidence, methodology, certification language, technical scope
+  tables, and references to other report files.
 
 ## Print Behavior
 
 - Print backgrounds are enabled.
 - Links remain visible and clickable.
-- A compact footer shows the current document title, the site name, the audit ID, and
-  `Page X of Y`.
+- Full and audit-summary footers show the document title, site name, audit ID, and `Page X of Y`.
+- The client business summary footer shows only its title, the site name, and `Page X of Y`.
 - Avoid orphaned headings, clipped content, blank trailing pages, and split status labels.

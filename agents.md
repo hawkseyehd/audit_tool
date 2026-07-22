@@ -1,10 +1,12 @@
-# Website Audit Tool - Node.js and TypeScript
+# Website Audit Tool - Electron, Node.js, and TypeScript
 
-A professional CLI that crawls public business websites, runs evidence-based quality checks, and produces structured JSON and client-ready Markdown reports.
+A professional desktop application and CLI that crawls public business websites, runs evidence-based quality checks, manages clients and prospects, and produces structured results and client-ready reports.
 
 ## Project Context
 
 - `context/PRD.md`
+- `context/PRD-2.md`
+- `context/desktop_app_stack.md`
 - `context/feature_list_in_order.md`
 - `context/current_feature.md`
 - `context/conding_standards.md`

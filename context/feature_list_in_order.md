@@ -568,3 +568,312 @@ This file converts the PRD into an implementation-focused feature list. Build th
 - AI-generated executive summaries.
 - Industry-specific business recommendations.
 - Custom client-ready report tone.
+
+## 21. Client Business Summary PDF
+
+### 21.1 Generate a client-only business handout
+
+- Write `pdf/client-summary.pdf` by default without replacing existing reports.
+- Keep the document to exactly three A4 pages.
+- Show the website name, pages reviewed, website health, and improvements identified.
+- Explain all findings through their effect on enquiries, visibility, trust, access,
+  measurement, or operations.
+- Present a focused order of work: act now, improve next, and strengthen over time.
+
+### 21.2 Keep content relevant to the client
+
+- Omit audit IDs, dates, durations, methodology, scanner details, evidence, and technical scope.
+- Omit references to other report files.
+- Use deterministic canonical findings without invented claims or financial forecasts.
+- Include one plain-language completeness note only when recorded page coverage is partial.
+
+### 21.3 Preserve report quality and safety
+
+- Reuse the secured batched Playwright PDF renderer.
+- Escape all website-derived content and bound variable-length prose.
+- Support default and `--client-summary-pdf`-only CLI output modes.
+- Verify exactly three nonblank A4 pages through automated and visual QA.
+
+## PRD-2: Client Workspace and Business Discovery
+
+Features 22 through 33 implement `context/PRD-2.md`. Complete Release 2A before beginning the
+business-discovery work in Release 2B.
+
+The approved desktop stack and process boundaries are defined in
+`context/desktop_app_stack.md`.
+
+Every UI task in Features 22 through 33 must use the project-local Impeccable skill for design,
+implementation, accessibility, responsive behavior, complete interaction states, critique,
+polish, and Electron window-based visual verification.
+
+## 22. Application and Persistence Foundation
+
+### 22.1 Establish the Electron desktop architecture
+
+- Add Electron main, preload, sandboxed renderer, and utility-process entry points.
+- Add a React and TypeScript renderer without coupling UI concerns to scanner modules.
+- Add Electron Forge using the TypeScript and Webpack template.
+- Preserve the existing CLI as a supported entry point.
+- Define application-data, artifact, temporary-file, and packaged-resource boundaries.
+
+### 22.2 Add persistent storage
+
+- Add SQLite with Prisma ORM and a typed database access layer.
+- Add migration, seed, and test-database workflows.
+- Define stable IDs, UTC timestamps, lifecycle states, and ownership-ready fields.
+- Store writable data under Electron's operating-system application-data directory.
+- Validate all IPC and persistence boundaries.
+
+### 22.3 Add the operational application shell
+
+- Add Overview, Prospects, Clients, Audits, Reports, and Settings navigation.
+- Add accessible responsive navigation and page structure.
+- Define reusable tokens and components through the project-local Impeccable skill.
+- Add loading, empty, error, and permission states.
+
+### 22.4 Add secure desktop process boundaries
+
+- Keep renderer `nodeIntegration` disabled with context isolation and sandboxing enabled.
+- Expose narrow typed APIs through preload and `contextBridge`.
+- Validate IPC senders, arguments, identifiers, state transitions, and resolved paths.
+- Prevent renderer access to Prisma, filesystem, shell, secrets, and raw Electron APIs.
+
+## 23. Client Management
+
+### 23.1 Define client and website records
+
+- Add client, website, tags, notes, owner, and lifecycle schemas.
+- Normalize and validate website URLs.
+- Warn on duplicate normalized domains.
+
+### 23.2 Build the client directory
+
+- Add search, filtering, status, pagination, and sorting.
+- Show active, paused, and archived states.
+- Add useful loading, empty, and failure states.
+
+### 23.3 Build client creation and editing
+
+- Create clients with business name and website URL.
+- Support optional public contact, address, category, tags, notes, and owner fields.
+- Add validation, conflict handling, and unsaved-change protection.
+
+### 23.4 Build the client detail workspace
+
+- Add Profile, Website Pages, Audits, Reports, and Activity views.
+- Preserve audit and report history when client details change.
+- Add safe archive and retention-aware deletion workflows.
+
+## 24. Website Page Discovery and Inventory
+
+### 24.1 Add lightweight discovery jobs
+
+- Reuse the safe crawler without running the full scanner suite.
+- Preserve domain, SSRF, timeout, response-size, retry, delay, and concurrency limits.
+- Never submit forms or interact with transactional controls.
+
+### 24.2 Persist discovered pages
+
+- Store normalized URL, title, page type, status, availability, and observation timestamps.
+- Record recommendation state and reason.
+- Keep stable page identity across rediscovery where possible.
+
+### 24.3 Add page rediscovery and comparison
+
+- Identify new, changed, unavailable, and no-longer-observed pages.
+- Preserve user selections and historical scopes.
+- Require review before applying ambiguous URL matches.
+
+### 24.4 Build the Website Pages view
+
+- Add search and filters for title, URL, page type, status, availability, and selection.
+- Show discovery state, page changes, and actionable failure messages.
+- Support database-backed pagination for large websites.
+
+## 25. Page Selection and Immutable Audit Scopes
+
+### 25.1 Add page-selection controls
+
+- Add accessible row checkboxes and indeterminate select-all behavior.
+- Support select visible, select recommended, clear selection, include, and exclude actions.
+- Keep selection stable across search, filters, and pagination.
+- Show selected, eligible, and unavailable page counts.
+
+### 25.2 Add recommended page selection
+
+- Prioritize homepage, contact, service, product, pricing, booking, form, and representative pages.
+- Exclude obvious archives, pagination, duplicate content, and ineligible resources by default.
+- Display the reason for every recommendation or exclusion.
+
+### 25.3 Create immutable audit scopes
+
+- Snapshot exact selected page IDs and normalized URLs.
+- Snapshot relevant audit configuration and requested report formats.
+- Prevent later rediscovery or client edits from changing historical scopes.
+- Validate that selected pages remain inside the allowed target scope.
+
+## 26. Background Audit Jobs and Progress
+
+### 26.1 Add durable audit jobs
+
+- Create queued jobs outside the renderer and Electron main event loop.
+- Reuse the existing audit engine through an Electron utility-process adapter.
+- Prevent duplicate submission through idempotency controls.
+- Support safe cancellation and cleanup.
+
+### 26.2 Add audit lifecycle states
+
+- Support queued, discovering, scanning, generating reports, completed, partial, failed, and
+  cancelled states.
+- Persist progress, attempts, warnings, and classified failures.
+- Continue after recoverable page or scanner failures.
+
+### 26.3 Build audit monitoring UI
+
+- Show stage, progress, selected-page count, warnings, and completion state.
+- Keep progress understandable after refresh or reconnection.
+- Add retry or recovery actions only where the operation is safe and idempotent.
+
+## 27. Audit History and Report Management
+
+### 27.1 Persist audit history
+
+- Store canonical results, immutable scope, score summaries, and artifact metadata.
+- Associate every audit with one client and website.
+- Preserve historical results when client or page records change.
+
+### 27.2 Build audit history views
+
+- Add client-level and workspace-level audit tables.
+- Filter by client, status, date, and result state.
+- Show partial and failed runs clearly without hiding successful work.
+
+### 27.3 Add secured report access
+
+- List all generated report formats.
+- Resolve report open, reveal, and export actions from trusted client and audit identifiers.
+- Never accept an unrestricted filesystem path from renderer input.
+- Add missing, expired, and generation-failed states.
+
+## 28. Release 2A Integration and Acceptance
+
+### 28.1 Test the client-to-report workflow
+
+- Cover client creation, page discovery, selection, immutable scope, audit execution, and report
+  export or opening end to end.
+- Verify historical scopes survive rediscovery.
+- Verify the existing CLI remains operational.
+
+### 28.2 Harden and package the desktop application
+
+- Test accessibility, resizable window layouts, display scaling, keyboard workflows, permissions,
+  and destructive actions.
+- Test worker restart, cancellation, partial failure, and cleanup behavior.
+- Build a signed-ready Squirrel.Windows installer and test it on a clean Windows environment.
+- Verify packaged Chromium, Playwright, Lighthouse, Prisma, and PDF generation.
+- Run formatting, lint, type checking, tests, build, dependency, and visual QA gates.
+
+## 29. Prospect Data Foundation
+
+### 29.1 Define prospect and campaign schemas
+
+- Keep prospects separate from clients.
+- Add prospect lifecycle, ownership, tags, notes, confidence, and provenance.
+- Add campaign criteria, limits, state, provider, and continuation data.
+
+### 29.2 Build the prospect workspace
+
+- Add searchable, filterable, paginated prospect tables.
+- Support new, reviewing, qualified, not-qualified, promoted, and suppressed states.
+- Show source, website availability, confidence, and last-verified time.
+
+### 29.3 Add suppression and retention controls
+
+- Support suppression, deletion, and do-not-contact states.
+- Prevent suppressed records from being re-imported silently.
+- Apply documented retention policies.
+
+## 30. Discovery Campaigns and Provider Adapters
+
+### 30.1 Build campaign creation
+
+- Select supported country, state or region, city, category, keywords, result limit, and required
+  fields.
+- Make radius search available only when the selected provider supports it.
+- Validate campaign limits before execution.
+
+### 30.2 Add approved provider adapters
+
+- Document provider terms, allowed fields, authentication, limits, pagination, and retention.
+- Add rate limiting, bounded retries, backoff, cancellation, and safe continuation.
+- Add deterministic provider test doubles.
+- Do not scrape prohibited search engines, map products, directories, or social networks.
+
+### 30.3 Add campaign execution and monitoring
+
+- Run campaigns as durable background jobs.
+- Show result count, progress, warnings, provider limits, and cancellation state.
+- Preserve source record IDs, URLs, and collection timestamps.
+
+## 31. Prospect Enrichment, Verification, and Deduplication
+
+### 31.1 Normalize imported business data
+
+- Normalize domain, business name, phone, address, category, and source identifiers.
+- Keep imported values separate from user-edited values.
+- Store provenance and last-verified time per supported field.
+
+### 31.2 Add safe website verification
+
+- Verify reachability, HTTPS, final domain, homepage title, and bounded page count.
+- Preserve SSRF, private-network, scope, timeout, retry, and concurrency controls.
+- Label pre-audit observations as opportunity signals rather than audit findings.
+
+### 31.3 Add duplicate detection
+
+- Block or link exact normalized-domain and provider-record duplicates.
+- Compare normalized phone, name, and address where available.
+- Present fuzzy matches for human review instead of merging automatically.
+
+## 32. Prospect Qualification and Client Promotion
+
+### 32.1 Add prospect review workflows
+
+- Support notes, tags, ownership, qualification state, and suppression.
+- Show data confidence, provenance, verification state, and duplicate warnings.
+- Keep opportunity signals distinct from completed audit scores.
+
+### 32.2 Add explicit client promotion
+
+- Promote only through a deliberate user command.
+- Create or link exactly one client.
+- Preserve prospect provenance and activity history.
+- Prevent duplicate clients by normalized domain.
+
+### 32.3 Connect promoted clients to page discovery
+
+- Carry approved public business details into the client record.
+- Offer page discovery as the next action.
+- Do not start a full audit automatically.
+
+## 33. Release 2B Compliance and Acceptance
+
+### 33.1 Validate provider and privacy controls
+
+- Verify approved-source terms, field allowlists, provenance, suppression, and retention.
+- Verify secrets and authorization data never enter logs or reports.
+- Verify the system does not collect unnecessary sensitive personal data.
+
+### 33.2 Test the campaign-to-client workflow
+
+- Cover campaign creation, provider import, normalization, deduplication, qualification,
+  suppression, and client promotion end to end.
+- Verify no prospect becomes a client automatically.
+- Verify no outreach or form submission occurs.
+
+### 33.3 Complete production hardening
+
+- Test accessibility, responsive behavior, large datasets, pagination, cancellation, retries, and
+  worker cleanup.
+- Complete threat review, dependency review, performance testing, and disaster-recovery checks.
+- Run all project quality gates and record final acceptance evidence.

@@ -146,6 +146,33 @@ packaging, and the compiled Electron smoke test all passed. The smoke run report
 client and both the database and worker services as ready. The pnpm production dependency audit
 reported no known vulnerabilities.
 
+## Website Page Discovery Validation
+
+Feature 24 adds focused repository, crawler-adapter, contract, and renderer coverage. Tests verify
+that discovery disables scanners, outputs, form submission, and browser interaction while retaining
+the crawler's domain, SSRF, timeout, response-size, redirect, retry, delay, concurrency, and page
+limits. Rediscovery tests confirm exact normalized URLs retain stable page IDs, titles and
+availability produce visible changes, new URLs remain distinct, absent URLs become not observed,
+and existing selection state is preserved.
+
+The persistence suite also covers unavailable pages, partial and failed runs, overlapping-run
+rejection, bounded job input, database-backed title and URL search, page-type and availability
+filters, pagination contracts, and interrupted-run recovery. Renderer tests cover useful empty
+state discovery, persisted results, run summaries, HTTP state, and recoverable discovery failures.
+
+The compiled Electron application loaded three representative persisted pages from SQLite and
+rendered the Website Pages tab at 1280 x 820 and 900 x 700. Full-page captures were inspected at
+full resolution. Summary counts, partial-run warning, filters, row hierarchy, status and change
+labels, failure messaging, responsive client actions, horizontal table access, typography, and
+spacing were clear with no overlap or clipping. The Impeccable layout and type detectors returned
+no findings.
+
+The complete Feature 24 regression gate passed 238 tests across 49 files. Formatting, zero-warning
+linting, strict CLI and desktop type checking, Prisma schema validation, the CLI production build,
+Windows x64 Electron packaging, and the compiled Electron smoke test all passed. The database and
+worker services reported ready, and the pnpm production dependency audit reported no known
+vulnerabilities.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.

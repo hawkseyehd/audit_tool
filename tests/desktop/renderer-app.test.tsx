@@ -21,9 +21,18 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
   return {
     createClient: vi.fn(),
     deleteClient: vi.fn(),
+    discoverWebsitePages: vi.fn(),
     getBootstrap: vi.fn().mockResolvedValue(bootstrap),
     getClient: vi.fn(),
     listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
+    listWebsitePages: vi.fn().mockResolvedValue({
+      items: [],
+      latestRun: null,
+      page: 1,
+      pageSize: 25,
+      summary: { available: 0, notObserved: 0, selected: 0, unavailable: 0 },
+      total: 0,
+    }),
     setClientStatus: vi.fn(),
     updateClient: vi.fn(),
     ...overrides,

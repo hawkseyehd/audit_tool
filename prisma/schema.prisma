@@ -41,16 +41,71 @@ model Client {
 }
 
 model Website {
-  id               String   @id @default(uuid())
+  id               String         @id @default(uuid())
   clientId         String
   url              String
   normalizedUrl    String
-  normalizedDomain String   @unique
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  normalizedDomain String         @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  pages            WebsitePage[]
+  discoveryRuns    DiscoveryRun[]
 
   @@index([clientId])
+}
+
+model WebsitePage {
+  id                   String    @id @default(uuid())
+  websiteId            String
+  normalizedUrl        String
+  observedUrl          String
+  title                String?
+  pageType             String
+  statusCode           Int?
+  failureCode          String?
+  failureMessage       String?
+  availability         String
+  changeState          String
+  recommendationState  String
+  recommendationReason String
+  selectionState       String    @default("default")
+  firstDiscoveredAt    DateTime
+  lastObservedAt       DateTime
+  lastChangedAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  website              Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, normalizedUrl])
+  @@index([websiteId, availability, lastObservedAt])
+  @@index([websiteId, pageType])
+  @@index([websiteId, changeState])
+  @@index([websiteId, selectionState])
+}
+
+model DiscoveryRun {
+  id                    String    @id @default(uuid())
+  websiteId             String
+  status                String
+  source                String
+  startedAt             DateTime  @default(now())
+  completedAt           DateTime?
+  observedPageCount     Int       @default(0)
+  discoveredUrlCount    Int       @default(0)
+  successfulPageCount   Int       @default(0)
+  failedPageCount       Int       @default(0)
+  newPageCount          Int       @default(0)
+  changedPageCount      Int       @default(0)
+  unavailablePageCount  Int       @default(0)
+  noLongerObservedCount Int       @default(0)
+  failureMessage        String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  website               Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, startedAt])
+  @@index([status])
 }
 
 model Tag {

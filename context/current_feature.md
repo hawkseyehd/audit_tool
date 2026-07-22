@@ -1,4 +1,4 @@
-# Current Feature: Client Summary PDF
+# Current Feature: Client Business Summary PDF
 
 ## Status
 
@@ -6,60 +6,67 @@ Completed
 
 ## Branch
 
-`feature/pdf-summary-report`
+`feature/client-business-summary`
 
 ## Objective
 
-Add a compact, deterministic `Audit Summary` PDF for client decision-makers while preserving the
-existing evidence-rich `Audit Report` as the technical record.
+Add a separate, client-only `Website Improvement Summary` PDF that explains every identified
+improvement through its likely business effect and remains no longer than three A4 pages.
 
 ## Included Scope
 
-- Generate `pdf/audit-summary.pdf` automatically alongside the full report.
-- Keep the summary bounded to a concise 3-5 page target for representative audits.
-- Lead with the website name, overall score, rating, scope, and issue counts.
-- Explain the audit outcome in plain language using canonical scores and finding counts.
-- Show no more than six priority issues with business impact and a recommended next step.
-- Summarize every finding through severity and category counts, including findings not shown in
-  the priority list.
-- Provide a deterministic 30-day action plan and compact scope and limitations statement.
-- Reference `audit-report.pdf` for detailed evidence, affected URLs, screenshots, and remediation.
-- Reuse one secured Playwright session when both PDFs are requested.
-- Add configuration, CLI selection, schemas, orchestration, receipts, tests, and documentation.
-- Use the project-local Impeccable skill and the PDF render-and-inspect verification workflow.
+- Generate `pdf/client-summary.pdf` alongside the existing summary and technical report.
+- Keep the document to exactly three logical A4 pages for empty, typical, and high-volume audits.
+- Show the website name, overall score with a plain-language verdict, and pages reviewed.
+- Group every finding deterministically into four client-facing business outcomes:
+  enquiries and conversion, visibility and acquisition, trust and access, and measurement and
+  operations.
+- Highlight the most important business risks using canonical finding impact and recommendation
+  content without inventing claims.
+- Represent smaller findings through business-outcome aggregates so none are silently omitted.
+- Replace severity-led scheduling with an issue-driven order of work: act now, improve next, and
+  strengthen over time.
+- Show one discreet completeness note only when one or more recorded pages contain an inspection
+  error.
+- Remove audit IDs, timestamps, scanner names, evidence details, technical scope tables,
+  certification language, and references to other report files.
+- Reuse the secured batched Playwright renderer and existing report design tokens.
+- Add schema, configuration, CLI, receipt, orchestration, tests, and documentation support.
+- Use the project-local Impeccable skill and PDF render-and-inspect workflow.
 
 ## Excluded Scope
 
-- Agency or client branding, custom themes, logos, and hosted assets.
-- AI-authored narrative, inferred business claims, or changes to canonical scoring and findings.
-- Screenshots and complete technical evidence in the summary PDF.
-- PDF signing, encryption, email delivery, and archival storage.
+- Replacing or removing `audit-summary.pdf` or `audit-report.pdf`.
+- Agency branding, custom client branding, logos, hosted assets, or screenshots.
+- AI-authored narrative, quantified commercial forecasts, or changes to canonical findings and
+  scoring.
+- Audit methodology, execution history, technical evidence, and implementation-level detail.
 
 ## Acceptance Criteria
 
-- A default audit writes both `pdf/audit-summary.pdf` and `pdf/audit-report.pdf`.
-- `--summary-pdf` writes the summary without retaining full HTML or full PDF output.
-- The title is `Audit Summary` and the detected website title is shown with hostname fallback.
-- The report remains concise regardless of total finding count and clearly accounts for all
-  findings through aggregate counts.
-- Priority issues are deterministic, severity-aware, safely escaped, and capped at six.
-- Empty and partial audit states remain clear and honest.
-- PDF rendering disables JavaScript, blocks non-local requests, validates signatures, and cleans
-  temporary artifacts on failure.
-- Representative pages pass visual inspection at A4 dimensions without clipping, overlap, blank
-  pages, or broken pagination.
-- Unit, integration, formatting, linting, type checking, build, and dependency gates pass.
+- Default audits write `pdf/client-summary.pdf` in addition to existing outputs.
+- `--client-summary-pdf` writes only the client business summary.
+- The title is `Website Improvement Summary` and the detected website name is prominent.
+- Pages reviewed is visible, while audit ID, timestamps, scanner details, technical limitations,
+  and other report references are absent.
+- Every finding contributes to exactly one business-outcome group and the displayed total matches
+  the canonical finding count.
+- Priority content is deterministic, safely escaped, bounded, and phrased from canonical impact
+  and recommendation fields.
+- The final PDF has exactly three A4 pages, including empty and high-volume fixtures.
+- Partial coverage is communicated in one plain-language sentence without exposing audit
+  mechanics.
+- PDF rendering remains script-disabled, network-blocked, tagged, signature-validated, atomic,
+  and cleanup-safe.
+- All pages pass visual inspection without clipping, overlap, blank pages, or broken pagination.
+- Formatting, linting, type checking, unit, integration, end-to-end, build, and dependency gates
+  pass.
 
 ## History
 
-- 2026-07-18: PM-02 full PDF report completed and merged as commit `b1805f9` on main.
-- 2026-07-18: Client summary PDF extension started from the approved report design system.
-- 2026-07-18: Implemented deterministic 3-5 page summary generation, six-issue priority cap,
-  complete issue accounting, plain-language outcome states, 30-day plan, scope, and limitations.
-- 2026-07-18: Added `--summary-pdf`, default output, schema and receipt paths, secured batched PDF
-  rendering, atomic signature validation, cleanup, selective output, and documentation.
-- 2026-07-18: Rendered and inspected all five pages of a representative client sample. Confirmed
-  A4 dimensions, tagged output, no JavaScript, nonblank pages, stable footers, and no clipping,
-  overlap, or broken pagination.
-- 2026-07-18: Verified formatting, linting, strict type checking, 208 tests across 41 files, the
-  exact Node 22 production build, and a production dependency audit with no known vulnerabilities.
+- 2026-07-21: Feature approved with pages reviewed retained as the sole client-visible scope
+  metric.
+- 2026-07-21: Implemented and validated the default and selective CLI output, deterministic
+  business-outcome mapping, exact three-page layout, secured PDF rendering, and regression
+  coverage. Representative, empty, and maximum-valid-content PDFs each rendered as three tagged,
+  nonblank A4 pages.

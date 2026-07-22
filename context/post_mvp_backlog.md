@@ -42,6 +42,10 @@ footers, link behavior, screenshot handling, font licensing, and visual regressi
 Client summary extension: Completed on 2026-07-18. Default audits now produce a bounded
 `audit-summary.pdf` for decision-makers alongside the evidence-rich `audit-report.pdf`.
 
+Client business summary extension: Completed on 2026-07-21. Default audits now also produce an
+exactly three-page `client-summary.pdf` that retains pages reviewed, explains every finding
+through a deterministic business-outcome group, and excludes audit-process detail.
+
 #### PM-03 Before/after comparison engine
 
 Depends on stable audit schemas. Define target identity, rule matching, score deltas, resolved/new/

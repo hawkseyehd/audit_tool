@@ -10,6 +10,14 @@
 
 ## Workflow
 
+### Mandatory UI Skill
+
+For the whole application UI, always load and follow the project-local Impeccable skill at
+`.agents/skills/impeccable/SKILL.md`. This applies to planning, information architecture, page and
+component design, implementation, responsive behavior, accessibility, states, critique, polish,
+and Electron window-based visual verification. Do not generate or modify UI without using this
+skill.
+
 This is the common workflow that we will use for every single feature/fix:
 
 1. **Document** - Document the feature in @context/current-feature.md.

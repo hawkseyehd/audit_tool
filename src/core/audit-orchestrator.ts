@@ -309,11 +309,12 @@ export async function runAuditOrchestration(
         auditResult,
       );
     }
-    if (config.writePdf || config.writePdfSummary) {
+    if (config.writeClientSummaryPdf || config.writePdf || config.writePdfSummary) {
       auditResult = await (dependencies.writePdfs ?? writePdfReports)(
         directories.pdfDirectory,
         auditResult,
         {
+          writeClientSummary: config.writeClientSummaryPdf,
           writeFullReport: config.writePdf,
           writeSummaryReport: config.writePdfSummary,
         },

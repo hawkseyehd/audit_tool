@@ -48,6 +48,12 @@ describe("runAuditOrchestration", () => {
             ...result,
             outputs: {
               ...result.outputs,
+              ...(selection.writeClientSummary
+                ? {
+                    clientSummaryPdfReportPath:
+                      "C:/reports/audit-complete-test/pdf/client-summary.pdf",
+                  }
+                : {}),
               ...(selection.writeFullReport
                 ? { pdfReportPath: "C:/reports/audit-complete-test/pdf/audit-report.pdf" }
                 : {}),
@@ -73,6 +79,7 @@ describe("runAuditOrchestration", () => {
     const jsonPath = outcome.auditResult.outputs.jsonReportPath ?? "";
     const htmlPath = outcome.auditResult.outputs.htmlReportPath ?? "";
     const markdownPath = outcome.auditResult.outputs.markdownReportPath ?? "";
+    expect(outcome.auditResult.outputs.clientSummaryPdfReportPath).toContain("client-summary.pdf");
     expect(outcome.auditResult.outputs.pdfReportPath).toContain("audit-report.pdf");
     expect(outcome.auditResult.outputs.summaryPdfReportPath).toContain("audit-summary.pdf");
     const persisted: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
@@ -100,6 +107,7 @@ describe("runAuditOrchestration", () => {
       includeAnalytics: false,
       writeHtml: false,
       writeMarkdown: false,
+      writeClientSummaryPdf: false,
       writePdf: false,
       writePdfSummary: false,
     });
@@ -155,6 +163,7 @@ describe("runAuditOrchestration", () => {
       writeHtml: false,
       writeJson: false,
       writeMarkdown: false,
+      writeClientSummaryPdf: false,
       writePdf: false,
       writePdfSummary: false,
     });
@@ -197,6 +206,7 @@ describe("runAuditOrchestration", () => {
       includeAnalytics: false,
       includeAccessibility: false,
       includeLighthouse: false,
+      writeClientSummaryPdf: false,
       writePdf: false,
       writePdfSummary: false,
     });
@@ -233,6 +243,7 @@ describe("runAuditOrchestration", () => {
         writeHtml: false,
         writeJson: false,
         writeMarkdown: false,
+        writeClientSummaryPdf: false,
         writePdf: false,
         writePdfSummary: false,
       });

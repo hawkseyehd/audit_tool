@@ -30,6 +30,7 @@ describe("executeCli", () => {
         maxPages: 15,
         outputDir: "./reports",
         viewports: ["desktop"],
+        writeClientSummaryPdf: true,
         writeHtml: true,
         writeJson: true,
         writeMarkdown: true,
@@ -68,6 +69,7 @@ describe("executeCli", () => {
       maxPages: 20,
       outputDir: "./custom-reports",
       viewports: ["desktop", "mobile"],
+      writeClientSummaryPdf: false,
       writeHtml: false,
       writeJson: true,
       writeMarkdown: false,
@@ -85,6 +87,7 @@ describe("executeCli", () => {
         scannedPageCount: 2,
         outputDirectory: "C:/reports/audit-browser",
         browserInspectionPath: "C:/reports/audit-browser/json/browser-inspection.json",
+        clientSummaryPdfReportPath: "C:/reports/audit-browser/pdf/client-summary.pdf",
         pdfReportPath: "C:/reports/audit-browser/pdf/audit-report.pdf",
         summaryPdfReportPath: "C:/reports/audit-browser/pdf/audit-summary.pdf",
         screenshotDirectory: "C:/reports/audit-browser/screenshots",
@@ -100,6 +103,7 @@ describe("executeCli", () => {
     expect(exitCode).toBe(0);
     expect(output).toContain("Audit browser inspection completed: audit-browser");
     expect(output).toContain("Browser inspection:");
+    expect(output).toContain("Client summary PDF:");
     expect(output).toContain("PDF report:");
     expect(output).toContain("Summary PDF:");
     expect(output).toContain("Screenshots:");
@@ -113,6 +117,7 @@ describe("executeCli", () => {
     );
 
     expect(harness.runAudit.mock.calls[0]?.[0]).toMatchObject({
+      writeClientSummaryPdf: false,
       writeHtml: false,
       writeJson: false,
       writeMarkdown: false,
@@ -129,11 +134,29 @@ describe("executeCli", () => {
     );
 
     expect(harness.runAudit.mock.calls[0]?.[0]).toMatchObject({
+      writeClientSummaryPdf: false,
       writeHtml: false,
       writeJson: false,
       writeMarkdown: false,
       writePdf: false,
       writePdfSummary: true,
+    });
+  });
+
+  it("supports selecting the client summary PDF as the only report format", async () => {
+    const harness = createHarness();
+    await executeCli(
+      ["node", "website-audit", "audit", "https://example.com", "--client-summary-pdf"],
+      harness.dependencies,
+    );
+
+    expect(harness.runAudit.mock.calls[0]?.[0]).toMatchObject({
+      writeClientSummaryPdf: true,
+      writeHtml: false,
+      writeJson: false,
+      writeMarkdown: false,
+      writePdf: false,
+      writePdfSummary: false,
     });
   });
 
@@ -192,6 +215,7 @@ describe("executeCli", () => {
     expect(help).toContain("--markdown");
     expect(help).toContain("--pdf");
     expect(help).toContain("--summary-pdf");
+    expect(help).toContain("--client-summary-pdf");
     expect(help).toContain("--no-submit-forms");
   });
 });

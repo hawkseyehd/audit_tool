@@ -2,9 +2,10 @@
 
 ## Scope
 
-This record covers the Website Audit Tool MVP through PM-02. It records repeatable local
-test coverage and one-time public-safe connectivity validation performed on 2026-07-18. It is
-not a quality assessment of the external sites and does not authorize invasive testing.
+This record covers the Website Audit Tool MVP through PM-02 and the client business summary
+extension. It records repeatable local test coverage, report-layout validation, and one-time
+public-safe connectivity validation performed on 2026-07-18. It is not a quality assessment of
+the external sites and does not authorize invasive testing.
 
 ## Automated Coverage Inventory
 
@@ -24,6 +25,9 @@ The normal Vitest suite is deterministic and uses local inputs only. It covers:
 - A4 full and summary PDF rendering, output signature validation, disabled JavaScript, blocked
   non-local renderer requests, temporary-artifact cleanup, batching, and selective/default CLI
   output behavior.
+- Three-page client business summary generation, complete finding-to-outcome accounting,
+  client-only content exclusions, bounded variable text, partial-coverage messaging, and
+  default/selective output behavior.
 - Stable JSON serialization, canonical schema validation, and atomic persistence.
 - Full orchestration, disabled scanners, scanner failures, crawl failures, deadlines, scoring,
   output ordering, and CLI completion receipts.
@@ -83,8 +87,22 @@ priority, action plan, scope, and limitation sections. Structural inspection con
 output, no JavaScript, non-empty extractable text on every page, A4 dimensions, and the title
 `Audit Summary - Northstar Digital`.
 
-The final regression suite completed 208 tests across 41 files after the summary extension and
-its long-content bounds were applied.
+The client business summary was rendered from a representative high-volume result with 11 pages
+reviewed, 37 findings, all ten finding categories, all four actionable severities, and one partial
+page. Poppler rendered exactly three A4 pages and every page was inspected at full resolution.
+The final document has no clipping, overlap, blank pages, broken wrapping, or footer issues and
+uses clear business snapshot, business impact, and recommended-work pages.
+
+The three-page physical contract was also checked against an empty result and a maximum-valid-text
+stress result. Both produced exactly three nonblank tagged A4 pages. Structural inspection with
+Poppler and pypdf confirmed the title, A4 dimensions, extractable text, tagged output, no
+JavaScript, pages reviewed, and the absence of visible audit IDs, timestamps, scanner details,
+methodology, certification language, and references to other reports.
+
+The final regression suite completed 215 tests across 42 files after the client business summary
+and its long-content bounds were applied. Formatting, lint, strict type checking, and the Node 22
+production build passed. The pnpm 11 production dependency audit reported no known
+vulnerabilities.
 
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,

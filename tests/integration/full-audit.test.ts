@@ -74,6 +74,9 @@ describe("full local audit integration", () => {
       expect(outcome.auditResult.summary.overallScore).toBeLessThan(100);
       expect(outcome.auditResult.outputs.htmlReportPath).toContain("audit-report.html");
       expect(outcome.auditResult.outputs.markdownReportPath).toContain("audit-report.md");
+      expect(outcome.auditResult.outputs.clientSummaryPdfReportPath).toContain(
+        "client-summary.pdf",
+      );
       expect(outcome.auditResult.outputs.pdfReportPath).toContain("audit-report.pdf");
       expect(outcome.auditResult.outputs.summaryPdfReportPath).toContain("audit-summary.pdf");
       expect(outcome.auditResult.outputs.jsonReportPath).toContain("audit-result.json");
@@ -87,6 +90,9 @@ describe("full local audit integration", () => {
       const json = await readFile(outcome.auditResult.outputs.jsonReportPath ?? "", "utf8");
       const html = await readFile(outcome.auditResult.outputs.htmlReportPath ?? "", "utf8");
       const markdown = await readFile(outcome.auditResult.outputs.markdownReportPath ?? "", "utf8");
+      const clientSummaryPdf = await readFile(
+        outcome.auditResult.outputs.clientSummaryPdfReportPath ?? "",
+      );
       const pdf = await readFile(outcome.auditResult.outputs.pdfReportPath ?? "");
       const summaryPdf = await readFile(outcome.auditResult.outputs.summaryPdfReportPath ?? "");
       expect(json).not.toContain("private-fixture-value");
@@ -94,6 +100,7 @@ describe("full local audit integration", () => {
       expect(html).toContain('<h1 id="report-title">Audit Report</h1>');
       expect(html).toContain("Controlled Website Audit Fixture");
       expect(html).toContain("Detailed findings");
+      expect(clientSummaryPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(summaryPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       expect(markdown).toContain("## Recommended 30-Day Action Plan");

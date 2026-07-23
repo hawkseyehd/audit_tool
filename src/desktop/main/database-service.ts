@@ -5,26 +5,34 @@ import { PrismaClient } from "@prisma/client";
 
 import {
   workspaceSummarySchema,
+  type AuditScopeConfiguration,
+  type AuditScopeRecord,
+  type AuditScopeReportFormat,
   type ClientInput,
   type ClientListQuery,
   type ClientListResult,
   type ClientMutationResult,
   type ClientRecord,
   type ClientStatus,
+  type CreateAuditScopeResult,
   type DeleteClientResult,
   type DesktopBootstrap,
   type DiscoveryResult,
+  type PageSelectionAction,
+  type PageSelectionResult,
   type WebsitePageListQuery,
   type WebsitePageListResult,
 } from "../shared/contracts.js";
+import { AuditScopeRepository } from "./audit-scope-repository.js";
 import { CLIENT_SCHEMA_STATEMENTS } from "./client-migrations.js";
 import { ClientRepository } from "./client-repository.js";
 import { PageDiscoveryService } from "./page-discovery-service.js";
 import { PageInventoryRepository } from "./page-inventory-repository.js";
 import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
+import { SCOPE_SCHEMA_STATEMENTS } from "./scope-migrations.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
@@ -33,6 +41,7 @@ export class DesktopDatabaseService {
   #discovery: PageDiscoveryService | undefined;
   #initializedAt: string | undefined;
   #pages: PageInventoryRepository | undefined;
+  #scopes: AuditScopeRepository | undefined;
 
   constructor(dataDirectory: string) {
     this.#dataDirectory = path.resolve(dataDirectory);
@@ -60,6 +69,9 @@ export class DesktopDatabaseService {
     for (const statement of PAGE_SCHEMA_STATEMENTS) {
       await this.#client.$executeRawUnsafe(statement);
     }
+    for (const statement of SCOPE_SCHEMA_STATEMENTS) {
+      await this.#client.$executeRawUnsafe(statement);
+    }
     await this.#client.discoveryRun.updateMany({
       data: {
         completedAt: new Date(),
@@ -77,6 +89,7 @@ export class DesktopDatabaseService {
     this.#clients = new ClientRepository(this.#client);
     this.#pages = new PageInventoryRepository(this.#client);
     this.#discovery = new PageDiscoveryService(this.#pages);
+    this.#scopes = new AuditScopeRepository(this.#client);
     this.#initializedAt = metadata.createdAt.toISOString();
   }
 
@@ -128,12 +141,33 @@ export class DesktopDatabaseService {
     return this.#requireDiscovery().discover(clientId, maxPages);
   }
 
+  applyPageSelection(
+    clientId: string,
+    action: PageSelectionAction,
+    pageIds: readonly string[],
+  ): Promise<PageSelectionResult> {
+    return this.#requireScopes().applySelection(clientId, action, pageIds);
+  }
+
+  createAuditScope(
+    clientId: string,
+    configuration: AuditScopeConfiguration,
+    reportFormats: readonly AuditScopeReportFormat[],
+  ): Promise<CreateAuditScopeResult> {
+    return this.#requireScopes().createScope(clientId, configuration, reportFormats);
+  }
+
+  getAuditScope(id: string): Promise<AuditScopeRecord | null> {
+    return this.#requireScopes().get(id);
+  }
+
   async close(): Promise<void> {
     const client = this.#client;
     this.#client = undefined;
     this.#clients = undefined;
     this.#discovery = undefined;
     this.#pages = undefined;
+    this.#scopes = undefined;
     if (client !== undefined) {
       await client.$disconnect();
     }
@@ -154,5 +188,10 @@ export class DesktopDatabaseService {
   #requireDiscovery(): PageDiscoveryService {
     if (this.#discovery === undefined) throw new Error("Page discovery service is unavailable");
     return this.#discovery;
+  }
+
+  #requireScopes(): AuditScopeRepository {
+    if (this.#scopes === undefined) throw new Error("Audit scope repository is unavailable");
+    return this.#scopes;
   }
 }

@@ -1,18 +1,24 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import {
+  applyPageSelectionRequestSchema,
+  auditScopeRecordSchema,
   clientInputSchema,
   clientListQuerySchema,
   clientListResultSchema,
   clientMutationResultSchema,
   clientRecordSchema,
+  createAuditScopeRequestSchema,
+  createAuditScopeResultSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
   desktopBootstrapSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
   getClientRequestSchema,
+  getAuditScopeRequestSchema,
   IPC_CHANNELS,
+  pageSelectionResultSchema,
   setClientStatusRequestSchema,
   updateClientRequestSchema,
   websitePageListQuerySchema,
@@ -21,6 +27,18 @@ import {
 } from "../shared/contracts.js";
 
 const desktopApi: DesktopApi = {
+  async applyPageSelection(input) {
+    const request = applyPageSelectionRequestSchema.parse(input);
+    return pageSelectionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.applyPageSelection, request),
+    );
+  },
+  async createAuditScope(input) {
+    const request = createAuditScopeRequestSchema.parse(input);
+    return createAuditScopeResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.createAuditScope, request),
+    );
+  },
   async createClient(input) {
     const request = clientInputSchema.parse(input);
     return clientMutationResultSchema.parse(
@@ -36,6 +54,11 @@ const desktopApi: DesktopApi = {
   async getBootstrap() {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getBootstrap);
     return desktopBootstrapSchema.parse(result);
+  },
+  async getAuditScope(input) {
+    const request = getAuditScopeRequestSchema.parse(input);
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getAuditScope, request);
+    return result === null ? null : auditScopeRecordSchema.parse(result);
   },
   async discoverWebsitePages(input) {
     const request = discoverWebsitePagesRequestSchema.parse(input);

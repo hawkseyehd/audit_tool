@@ -1,4 +1,4 @@
-# Current Feature: Website Page Discovery and Inventory
+# Current Feature: Page Selection and Immutable Audit Scopes
 
 ## Status
 
@@ -6,58 +6,58 @@ Complete
 
 ## Branch
 
-`feature/page-discovery`
+`feature/page-selection-scopes`
 
 ## Feature
 
-Feature 24 from `context/feature_list_in_order.md`.
+Feature 25 from `context/feature_list_in_order.md`.
 
 ## Objective
 
-Let a practitioner safely discover a client's public website pages, preserve a durable current
-inventory, understand rediscovery changes, and review the result inside the client workspace.
+Let practitioners choose an exact, reviewable set of eligible website pages and lock that choice
+into an immutable audit scope that cannot be changed by later rediscovery or client edits.
 
 ## Included Scope
 
-- Reuse the existing safe crawler without running browser inspection or scanner suites.
-- Persist bounded discovery runs and stable website-page records.
-- Store normalized and observed URLs, title, page type, response/failure state, timestamps,
-  availability, recommendation state and reason, and future-compatible selection state.
-- Compare rediscovery with the existing inventory and classify new, changed, unavailable, and
-  no-longer-observed pages without changing historical scope data.
-- Add typed and sender-validated discovery and inventory IPC methods.
-- Add database-backed page search, filters, sorting, and pagination.
-- Build the Website Pages client tab with useful empty, running, failure, partial, and ready states.
-- Visually verify standard and compact desktop windows using the project-local Impeccable skill.
-- Preserve all Feature 23 client behavior and the existing CLI.
+- Add durable include, exclude, clear, visible-page, and recommended-page selection operations.
+- Add accessible row checkboxes and indeterminate select-all behavior.
+- Keep selection stable across search, filters, pagination, and rediscovery.
+- Show selected, eligible, unavailable, and excluded counts with clear ineligibility reasons.
+- Apply deterministic recommendations for representative pages while excluding obvious archives,
+  account, transaction, duplicate-content, and unavailable pages by default.
+- Persist immutable audit scope and scope-page snapshots with target identity, selected page IDs and
+  normalized URLs, relevant configuration, report formats, actor, and creation time.
+- Validate every selected page against the client's current website and allowed target scope.
+- Make retained audit scopes prevent permanent client deletion.
+- Add typed and sender-validated selection and scope IPC methods.
+- Extend the Impeccable Website Pages workspace with efficient selection and scope actions.
+- Preserve Feature 24 discovery behavior and the existing CLI.
 
 ## Excluded Scope
 
-- Page checkbox selection, recommendation bulk actions, and immutable audit scopes, implemented in
-  Feature 25.
-- Full audit execution and progress jobs, implemented in Feature 26.
-- Historical audit and report artifact management, implemented in Feature 27.
+- Executing the immutable scope as a background audit job, implemented in Feature 26.
+- Audit history and report artifact management, implemented in Feature 27.
 
 ## Acceptance Criteria
 
-- Discovery remains within the validated website scope and all existing crawl safety bounds.
-- A discovery run never executes scanners, submits forms, or interacts with page controls.
-- Equivalent normalized URLs map to stable page records across rediscovery.
-- Rediscovery records new, changed, unavailable, and no-longer-observed counts.
-- Previously stored selection state and stable page IDs survive rediscovery.
-- Page inventory queries are database-backed, validated, filtered, sorted, and paginated.
-- The Website Pages tab clearly exposes state, counts, timestamps, changes, and safe failures.
-- Strict renderer, preload, IPC, repository, and crawler-adapter tests cover the workflow.
-- The existing CLI and client management workspace remain operational.
+- Selection changes are database-backed and remain stable across filters and pagination.
+- Include operations refuse unavailable, no-longer-observed, or out-of-scope pages.
+- Select recommended chooses only current, eligible, representative pages and records reasons.
+- Bulk selection requests are bounded, validated, and scoped to one client website.
+- Creating a scope snapshots exact selected page IDs and normalized URLs plus validated settings.
+- Rediscovery and client edits cannot modify an existing scope snapshot.
+- Historical scopes remain readable and block destructive client deletion.
+- The selection UI is keyboard accessible and visually verified at compact and standard windows.
+- Strict persistence, contract, renderer, and scope-immutability tests cover the workflow.
 - All project quality gates pass.
 
 ## History
 
-- 2026-07-23: Feature started after Feature 23 passed 231 tests and desktop visual QA.
-- 2026-07-23: Added safe discovery runs, stable page inventory persistence, exact-URL rediscovery
-  comparison, interruption recovery, database-backed filters, typed IPC, and the Impeccable Website
-  Pages workspace.
-- 2026-07-23: Feature completed after 238 tests across 49 files, formatting, linting, strict CLI and
+- 2026-07-23: Feature started after Feature 24 passed 238 tests and desktop visual QA.
+- 2026-07-23: Added durable include, exclude, reset, visible, and recommended selection actions,
+  indeterminate checkbox behavior, immutable scope snapshots, URL-scope validation, and
+  retention-aware deletion.
+- 2026-07-23: Feature completed after 244 tests across 50 files, formatting, linting, strict CLI and
   desktop type checking, Prisma validation, the CLI build, Windows Electron packaging, compiled
-  desktop smoke, full-page standard and compact visual review, clean Impeccable scans, and the
+  scope-lock smoke, full-page standard and compact visual review, clean Impeccable scans, and the
   production dependency audit all passed.

@@ -209,46 +209,72 @@ export class PageInventoryRepository {
         latestRun: null,
         page: query.page,
         pageSize: query.pageSize,
-        summary: { available: 0, notObserved: 0, selected: 0, unavailable: 0 },
+        summary: {
+          available: 0,
+          eligible: 0,
+          excluded: 0,
+          notObserved: 0,
+          selected: 0,
+          unavailable: 0,
+        },
         total: 0,
       });
     }
 
     const where = buildPageWhere(website.id, query);
     const orderBy = buildPageOrder(query);
-    const [items, total, latestRun, available, unavailable, notObserved, selected] =
-      await Promise.all([
-        this.#database.websitePage.findMany({
-          orderBy,
-          skip: (query.page - 1) * query.pageSize,
-          take: query.pageSize,
-          where,
-        }),
-        this.#database.websitePage.count({ where }),
-        this.#database.discoveryRun.findFirst({
-          orderBy: { startedAt: "desc" },
-          where: { websiteId: website.id },
-        }),
-        this.#database.websitePage.count({
-          where: { availability: "available", websiteId: website.id },
-        }),
-        this.#database.websitePage.count({
-          where: { availability: "unavailable", websiteId: website.id },
-        }),
-        this.#database.websitePage.count({
-          where: { availability: "not-observed", websiteId: website.id },
-        }),
-        this.#database.websitePage.count({
-          where: { selectionState: "included", websiteId: website.id },
-        }),
-      ]);
+    const [
+      items,
+      total,
+      latestRun,
+      available,
+      eligible,
+      excluded,
+      unavailable,
+      notObserved,
+      selected,
+    ] = await Promise.all([
+      this.#database.websitePage.findMany({
+        orderBy,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        where,
+      }),
+      this.#database.websitePage.count({ where }),
+      this.#database.discoveryRun.findFirst({
+        orderBy: { startedAt: "desc" },
+        where: { websiteId: website.id },
+      }),
+      this.#database.websitePage.count({
+        where: { availability: "available", websiteId: website.id },
+      }),
+      this.#database.websitePage.count({
+        where: {
+          availability: "available",
+          recommendationState: { not: "excluded" },
+          websiteId: website.id,
+        },
+      }),
+      this.#database.websitePage.count({
+        where: { selectionState: "excluded", websiteId: website.id },
+      }),
+      this.#database.websitePage.count({
+        where: { availability: "unavailable", websiteId: website.id },
+      }),
+      this.#database.websitePage.count({
+        where: { availability: "not-observed", websiteId: website.id },
+      }),
+      this.#database.websitePage.count({
+        where: { selectionState: "included", websiteId: website.id },
+      }),
+    ]);
 
     return websitePageListResultSchema.parse({
       items: items.map(toWebsitePage),
       latestRun: latestRun === null ? null : toDiscoveryRun(latestRun),
       page: query.page,
       pageSize: query.pageSize,
-      summary: { available, notObserved, selected, unavailable },
+      summary: { available, eligible, excluded, notObserved, selected, unavailable },
       total,
     });
   }

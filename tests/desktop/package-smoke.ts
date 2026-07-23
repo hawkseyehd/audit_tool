@@ -73,6 +73,7 @@ try {
         pageType: "home",
         recommendationReason: "Representative customer-facing page recommended for review.",
         recommendationState: "recommended",
+        selectionState: "included",
         statusCode: 200,
         title: "Northstar Dental Studio",
       },
@@ -84,6 +85,7 @@ try {
         pageType: "service",
         recommendationReason: "Representative customer-facing page recommended for review.",
         recommendationState: "recommended",
+        selectionState: "default",
         statusCode: 200,
         title: "Dental Services",
       },
@@ -97,6 +99,7 @@ try {
         pageType: "contact",
         recommendationReason: "Representative customer-facing page recommended for review.",
         recommendationState: "recommended",
+        selectionState: "default",
         statusCode: null,
         title: "Contact",
       },
@@ -157,6 +160,8 @@ try {
   await page.getByText("Northstar Dental Studio").click();
   await page.getByRole("tab", { name: "Website Pages" }).click();
   await page.getByText("Dental Services").waitFor();
+  await page.getByRole("button", { name: "Lock audit scope" }).click();
+  await page.getByText("Audit scope locked").waitFor();
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
   });

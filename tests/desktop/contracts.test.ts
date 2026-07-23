@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyPageSelectionRequestSchema,
   clientInputSchema,
   clientListQuerySchema,
+  createAuditScopeRequestSchema,
   desktopBootstrapSchema,
   discoverWebsitePagesRequestSchema,
   websitePageListQuerySchema,
@@ -71,5 +73,41 @@ describe("desktop contracts", () => {
       sort: "lastObservedAt",
       status: "all",
     });
+  });
+
+  it("validates bounded selection commands and no-submit scope snapshots", () => {
+    const clientId = "953c75a4-6293-4fbc-bfe6-595f68368c1c";
+    const pageId = "58c4439a-30fd-42b7-b742-28d5b6f66781";
+    expect(
+      applyPageSelectionRequestSchema.parse({ action: "include", clientId, pageIds: [pageId] }),
+    ).toEqual({ action: "include", clientId, pageIds: [pageId] });
+    expect(
+      applyPageSelectionRequestSchema.safeParse({ action: "include", clientId, pageIds: [] })
+        .success,
+    ).toBe(false);
+    expect(
+      applyPageSelectionRequestSchema.safeParse({
+        action: "include",
+        clientId,
+        pageIds: [pageId, pageId],
+      }).success,
+    ).toBe(false);
+    expect(
+      createAuditScopeRequestSchema.safeParse({
+        clientId,
+        configuration: {
+          includeAccessibility: true,
+          includeAnalytics: true,
+          includeForms: true,
+          includeLighthouse: true,
+          includeSecurity: true,
+          includeSeo: true,
+          includeUxHeuristics: true,
+          submitForms: true,
+          viewports: ["desktop"],
+        },
+        reportFormats: ["pdf"],
+      }).success,
+    ).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WebsitePages } from "../../src/desktop/renderer/clients/website-pages.js";
 import type {
+  AuditScopeRecord,
   DesktopApi,
   DiscoveryRun,
   WebsitePageListResult,
@@ -53,7 +54,14 @@ const emptyResult: WebsitePageListResult = {
   latestRun: null,
   page: 1,
   pageSize: 25,
-  summary: { available: 0, notObserved: 0, selected: 0, unavailable: 0 },
+  summary: {
+    available: 0,
+    eligible: 0,
+    excluded: 0,
+    notObserved: 0,
+    selected: 0,
+    unavailable: 0,
+  },
   total: 0,
 };
 const readyResult: WebsitePageListResult = {
@@ -61,16 +69,55 @@ const readyResult: WebsitePageListResult = {
   latestRun: run,
   page: 1,
   pageSize: 25,
-  summary: { available: 1, notObserved: 0, selected: 0, unavailable: 0 },
+  summary: {
+    available: 1,
+    eligible: 1,
+    excluded: 0,
+    notObserved: 0,
+    selected: 0,
+    unavailable: 0,
+  },
   total: 1,
+};
+const selectedResult: WebsitePageListResult = {
+  ...readyResult,
+  items: [{ ...page, selectionState: "included" }],
+  summary: { ...readyResult.summary, selected: 1 },
+};
+const scope: AuditScopeRecord = {
+  clientBusinessName: "Northstar Dental",
+  clientId,
+  configuration: {
+    includeAccessibility: true,
+    includeAnalytics: true,
+    includeForms: true,
+    includeLighthouse: true,
+    includeSecurity: true,
+    includeSeo: true,
+    includeUxHeuristics: true,
+    submitForms: false,
+    viewports: ["desktop", "mobile"],
+  },
+  createdAt: "2026-07-23T12:00:00.000Z",
+  id: "78c4439a-30fd-42b7-b742-28d5b6f66783",
+  normalizedDomain: "northstar.test",
+  pages: [{ normalizedUrl: page.normalizedUrl, pageId: page.id, pageType: page.pageType }],
+  reportFormats: ["client-summary-pdf", "summary-pdf", "pdf", "html", "json", "markdown"],
+  requestedBy: "local-user",
+  selectedPageCount: 1,
+  targetUrl: "https://northstar.test/",
+  websiteId: "88c4439a-30fd-42b7-b742-28d5b6f66784",
 };
 
 function installApi(overrides: Partial<DesktopApi>): void {
   const api: DesktopApi = {
+    applyPageSelection: vi.fn(),
     createClient: vi.fn(),
+    createAuditScope: vi.fn(),
     deleteClient: vi.fn(),
     discoverWebsitePages: vi.fn(),
     getBootstrap: vi.fn(),
+    getAuditScope: vi.fn(),
     getClient: vi.fn(),
     listClients: vi.fn(),
     listWebsitePages: vi.fn(),
@@ -128,5 +175,33 @@ describe("WebsitePages", () => {
       "The website did not respond.",
     );
     expect(screen.getByText("Northstar Dental")).toBeTruthy();
+  });
+
+  it("persists row selection and creates an immutable audit scope", async () => {
+    const listWebsitePages = vi
+      .fn<DesktopApi["listWebsitePages"]>()
+      .mockResolvedValueOnce(readyResult)
+      .mockResolvedValue(selectedResult);
+    const applyPageSelection = vi
+      .fn<DesktopApi["applyPageSelection"]>()
+      .mockResolvedValue({ ok: true, summary: selectedResult.summary });
+    const createAuditScope = vi
+      .fn<DesktopApi["createAuditScope"]>()
+      .mockResolvedValue({ ok: true, scope });
+    installApi({ applyPageSelection, createAuditScope, listWebsitePages });
+    const user = userEvent.setup();
+    render(<WebsitePages clientId={clientId} websiteUrl="https://northstar.test/" />);
+
+    await user.click(await screen.findByLabelText("Include Northstar Dental"));
+    expect(applyPageSelection).toHaveBeenCalledWith({
+      action: "include",
+      clientId,
+      pageIds: [page.id],
+    });
+    await user.click(await screen.findByRole("button", { name: "Lock audit scope" }));
+
+    expect(createAuditScope).toHaveBeenCalledOnce();
+    expect(await screen.findByText("Audit scope locked")).toBeTruthy();
+    expect(screen.getByText("1 page · 78c4439a")).toBeTruthy();
   });
 });

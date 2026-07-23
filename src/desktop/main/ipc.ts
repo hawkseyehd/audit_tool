@@ -1,18 +1,24 @@
 import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
 
 import {
+  applyPageSelectionRequestSchema,
+  auditScopeRecordSchema,
   clientInputSchema,
   clientListQuerySchema,
   clientListResultSchema,
   clientMutationResultSchema,
   clientRecordSchema,
+  createAuditScopeRequestSchema,
+  createAuditScopeResultSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
   getClientRequestSchema,
+  getAuditScopeRequestSchema,
   IPC_CHANNELS,
   setClientStatusRequestSchema,
+  pageSelectionResultSchema,
   updateClientRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
@@ -87,6 +93,30 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     return discoveryResultSchema.parse(
       await services.database.discoverWebsitePages(request.clientId, request.maxPages),
     );
+  });
+  ipcMain.handle(IPC_CHANNELS.applyPageSelection, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = applyPageSelectionRequestSchema.parse(input);
+    return pageSelectionResultSchema.parse(
+      await services.database.applyPageSelection(request.clientId, request.action, request.pageIds),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.createAuditScope, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = createAuditScopeRequestSchema.parse(input);
+    return createAuditScopeResultSchema.parse(
+      await services.database.createAuditScope(
+        request.clientId,
+        request.configuration,
+        request.reportFormats,
+      ),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.getAuditScope, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = getAuditScopeRequestSchema.parse(input);
+    const scope = await services.database.getAuditScope(request.id);
+    return scope === null ? null : auditScopeRecordSchema.parse(scope);
   });
 }
 

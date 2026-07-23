@@ -4,16 +4,20 @@ import type { Logger } from "pino";
 import { desktopBootstrapSchema, type DesktopBootstrap } from "../shared/contracts.js";
 import { AuditJobManager } from "./audit-job-manager.js";
 import { DesktopDatabaseService } from "./database-service.js";
+import { ReportArtifactService } from "./report-artifact-service.js";
 import { WorkerCoordinator } from "./worker-coordinator.js";
 
 export class ApplicationServices {
   readonly #database: DesktopDatabaseService;
   readonly #jobs: AuditJobManager;
   readonly #logger: Logger;
+  readonly #dataDirectory: string;
   readonly #worker: WorkerCoordinator;
   #databaseReady = false;
+  #reports: ReportArtifactService | undefined;
 
   constructor(options: { dataDirectory: string; logger: Logger }) {
+    this.#dataDirectory = options.dataDirectory;
     this.#database = new DesktopDatabaseService(options.dataDirectory);
     this.#logger = options.logger;
     this.#worker = new WorkerCoordinator(options.logger);
@@ -40,6 +44,13 @@ export class ApplicationServices {
     }
     if (databaseResult.status === "fulfilled" && workerResult.status === "fulfilled") {
       await this.#jobs.initialize();
+    }
+    if (databaseResult.status === "fulfilled") {
+      this.#reports = new ReportArtifactService({
+        dataDirectory: this.#dataDirectory,
+        history: this.#database.history,
+      });
+      await this.#reports.initialize();
     }
   }
 
@@ -71,9 +82,15 @@ export class ApplicationServices {
     return this.#jobs;
   }
 
+  get reports(): ReportArtifactService {
+    if (this.#reports === undefined) throw new Error("Report service is unavailable");
+    return this.#reports;
+  }
+
   async close(): Promise<void> {
     await this.#jobs.stop();
     await this.#worker.stop();
+    this.#reports = undefined;
     await this.#database.close();
   }
 }

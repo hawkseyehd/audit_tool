@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { Prisma, type AuditJob, type PrismaClient } from "@prisma/client";
 
 import { auditResultSchema } from "../../core/schemas.js";
@@ -15,6 +17,7 @@ import {
   type AuditJobState,
   type AuditScopeConfiguration,
   type AuditScopeReportFormat,
+  type ReportArtifactFormat,
 } from "../shared/contracts.js";
 
 const ACTIVE_STATES: readonly AuditJobState[] = [
@@ -38,9 +41,11 @@ export interface AuditJobExecution {
 
 export class AuditJobRepository {
   readonly #database: PrismaClient;
+  readonly #outputRoot: string;
 
-  constructor(database: PrismaClient) {
+  constructor(database: PrismaClient, outputRoot: string) {
     this.#database = database;
+    this.#outputRoot = path.resolve(outputRoot);
   }
 
   async createForScope(scopeId: string): Promise<AuditJobMutationResult> {
@@ -224,27 +229,72 @@ export class AuditJobRepository {
       (page) => page.error !== undefined,
     ).length;
     const state: AuditJobState = partial ? "partially-completed" : "completed";
-    const job = await this.#transition(id, [...RUNNING_STATES], {
-      completedAt: new Date(),
-      failedPageCount,
-      outputDirectory,
-      pagesCompleted: parsedResult.scannedPages.length,
-      resultJson: JSON.stringify(parsedResult),
-      state,
-      warningCount: boundedWarnings.length,
-      warningsJson: JSON.stringify(boundedWarnings),
+    const completedAt = new Date(parsedResult.completedAt);
+    const job = await this.#database.$transaction(async (transaction) => {
+      const changed = await transaction.auditJob.updateMany({
+        data: {
+          completedAt,
+          failedPageCount,
+          outputDirectory,
+          pagesCompleted: parsedResult.scannedPages.length,
+          resultJson: JSON.stringify(parsedResult),
+          state,
+          warningCount: boundedWarnings.length,
+          warningsJson: JSON.stringify(boundedWarnings),
+        },
+        where: { id, state: { in: [...RUNNING_STATES] } },
+      });
+      if (changed.count !== 1) throw new AuditJobTransitionError(id, RUNNING_STATES);
+
+      const completedJob = await transaction.auditJob.findUniqueOrThrow({
+        include: { scope: { select: { reportFormatsJson: true } } },
+        where: { id },
+      });
+      const formats = auditScopeReportFormatSchema
+        .array()
+        .min(1)
+        .parse(JSON.parse(completedJob.scope.reportFormatsJson) as unknown);
+      const resultRecord = await transaction.auditResultRecord.create({
+        data: {
+          auditId: parsedResult.auditId,
+          canonicalResultJson: JSON.stringify(parsedResult),
+          categoryScoresJson: JSON.stringify(parsedResult.summary.categoryScores),
+          clientId: completedJob.clientId,
+          completedAt,
+          findingCountsJson: JSON.stringify(parsedResult.summary.findingCounts),
+          jobId: completedJob.id,
+          overallScore: parsedResult.summary.overallScore,
+          resultState: state,
+          schemaVersion: parsedResult.schemaVersion,
+          scopeId: completedJob.scopeId,
+          startedAt: new Date(parsedResult.startedAt),
+          websiteId: completedJob.websiteId,
+        },
+      });
+      await transaction.reportArtifact.createMany({
+        data: formats.map((format) =>
+          createArtifactRecord(
+            format,
+            parsedResult,
+            this.#outputRoot,
+            resultRecord.id,
+            completedJob,
+          ),
+        ),
+      });
+      await transaction.clientActivity.create({
+        data: {
+          clientId: completedJob.clientId,
+          kind: "audit-job-completed",
+          summary:
+            state === "completed"
+              ? `Audit completed for ${String(completedJob.pagesTotal)} pages`
+              : `Audit partially completed with ${String(failedPageCount)} failed pages`,
+        },
+      });
+      return completedJob;
     });
-    await this.#database.clientActivity.create({
-      data: {
-        clientId: job.clientId,
-        kind: "audit-job-completed",
-        summary:
-          state === "completed"
-            ? `Audit completed for ${String(job.pagesTotal)} pages`
-            : `Audit partially completed with ${String(job.failedPageCount)} failed pages`,
-      },
-    });
-    return job;
+    return toAuditJob(job);
   }
 
   async fail(id: string, code: string, message: string): Promise<AuditJobRecord> {
@@ -402,6 +452,57 @@ function safeFailureCode(value: string): string {
 
 function safeFailureMessage(value: string): string {
   return value.replace(/\s+/gu, " ").trim().slice(0, 1_000) || "The audit could not complete.";
+}
+
+const ARTIFACT_FILE_NAMES: Record<ReportArtifactFormat, string> = {
+  "client-summary-pdf": "client-summary.pdf",
+  "summary-pdf": "audit-summary.pdf",
+  html: "audit-report.html",
+  json: "audit-result.json",
+  markdown: "audit-report.md",
+  pdf: "audit-report.pdf",
+};
+
+function createArtifactRecord(
+  format: ReportArtifactFormat,
+  result: AuditResult,
+  outputRoot: string,
+  resultId: string,
+  job: AuditJob,
+) {
+  const outputPath = outputPathForFormat(format, result);
+  const storedPath = outputPath === undefined ? null : safeRelativePath(outputRoot, outputPath);
+  return {
+    clientId: job.clientId,
+    fileName: ARTIFACT_FILE_NAMES[format],
+    format,
+    jobId: job.id,
+    resultId,
+    status: storedPath === null ? "generation-failed" : "available",
+    storedPath,
+    websiteId: job.websiteId,
+  };
+}
+
+function outputPathForFormat(
+  format: ReportArtifactFormat,
+  result: AuditResult,
+): string | undefined {
+  const paths: Record<ReportArtifactFormat, string | undefined> = {
+    "client-summary-pdf": result.outputs.clientSummaryPdfReportPath,
+    "summary-pdf": result.outputs.summaryPdfReportPath,
+    html: result.outputs.htmlReportPath,
+    json: result.outputs.jsonReportPath,
+    markdown: result.outputs.markdownReportPath,
+    pdf: result.outputs.pdfReportPath,
+  };
+  return paths[format];
+}
+
+function safeRelativePath(root: string, candidate: string): string | null {
+  const relative = path.relative(root, path.resolve(candidate));
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) return null;
+  return relative;
 }
 
 function jobError(

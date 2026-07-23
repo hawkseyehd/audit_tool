@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DesktopBootstrap } from "../shared/contracts.js";
 import { AuditJobs } from "./audits/audit-jobs.js";
 import { ClientWorkspace } from "./clients/client-workspace.js";
+import { ReportLibrary } from "./reports/report-library.js";
 
 const destinations = [
   { icon: LayoutDashboard, id: "overview", label: "Overview" },
@@ -343,6 +344,17 @@ export function App(): React.JSX.Element {
               <AuditJobs />
             </section>
           )}
+          {state.type === "ready" && destination === "reports" && (
+            <section aria-labelledby="report-library-title" className="section-block">
+              <div className="section-heading">
+                <div>
+                  <h2 id="report-library-title">Report library</h2>
+                  <p>Client-ready documents and structured audit results.</p>
+                </div>
+              </div>
+              <ReportLibrary />
+            </section>
+          )}
           {state.type === "ready" && destination === "settings" && (
             <SettingsView data={state.data} />
           )}
@@ -350,6 +362,7 @@ export function App(): React.JSX.Element {
             destination !== "overview" &&
             destination !== "clients" &&
             destination !== "audits" &&
+            destination !== "reports" &&
             destination !== "settings" && <EmptyDestination destination={destination} />}
         </div>
       </main>

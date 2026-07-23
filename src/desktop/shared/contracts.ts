@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PAGE_TYPES, pageTypeSchema } from "../../core/schemas.js";
+import { PAGE_TYPES, findingCountsSchema, pageTypeSchema } from "../../core/schemas.js";
 
 export const IPC_CHANNELS = {
   applyPageSelection: "desktop:pages:select",
@@ -9,13 +9,18 @@ export const IPC_CHANNELS = {
   createAuditScope: "desktop:scopes:create",
   deleteClient: "desktop:clients:delete",
   discoverWebsitePages: "desktop:pages:discover",
+  exportReport: "desktop:reports:export",
   getAuditJob: "desktop:audits:get",
   getBootstrap: "desktop:get-bootstrap",
   getAuditScope: "desktop:scopes:get",
   getClient: "desktop:clients:get",
   listAuditJobs: "desktop:audits:list",
+  listAuditHistory: "desktop:audit-history:list",
   listClients: "desktop:clients:list",
+  listReportArtifacts: "desktop:reports:list",
   listWebsitePages: "desktop:pages:list",
+  openReport: "desktop:reports:open",
+  revealReport: "desktop:reports:reveal",
   retryAuditJob: "desktop:audits:retry",
   setClientStatus: "desktop:clients:set-status",
   startAuditJob: "desktop:audits:start",
@@ -516,6 +521,138 @@ export const auditJobMutationResultSchema = z.discriminatedUnion("ok", [
     .strict(),
 ]);
 
+export const AUDIT_HISTORY_RESULT_STATES = [
+  "completed",
+  "partially-completed",
+  "unavailable",
+] as const;
+export const auditHistoryResultStateSchema = z.enum(AUDIT_HISTORY_RESULT_STATES);
+export const auditResultSummarySchema = z
+  .object({
+    artifactCount: z.number().int().nonnegative().max(AUDIT_SCOPE_REPORT_FORMATS.length),
+    auditId: z.string().trim().min(1).max(200),
+    availableArtifactCount: z.number().int().nonnegative().max(AUDIT_SCOPE_REPORT_FORMATS.length),
+    categoryScores: z.record(z.string(), z.number().min(0).max(100)),
+    completedAt: z.iso.datetime(),
+    findingCounts: findingCountsSchema,
+    overallScore: z.number().min(0).max(100),
+    resultState: z.enum(["completed", "partially-completed"]),
+    schemaVersion: z.string().trim().min(1).max(50),
+  })
+  .strict()
+  .refine((result) => result.availableArtifactCount <= result.artifactCount, {
+    message: "Available artifact count cannot exceed the artifact total",
+    path: ["availableArtifactCount"],
+  });
+export const auditHistoryRecordSchema = z
+  .object({
+    job: auditJobRecordSchema,
+    result: auditResultSummarySchema.nullable(),
+  })
+  .strict();
+export const auditHistoryListQuerySchema = z
+  .object({
+    clientId: clientIdSchema.optional(),
+    dateFrom: z.iso.datetime().optional(),
+    dateTo: z.iso.datetime().optional(),
+    page: z.number().int().min(1).max(100_000).default(1),
+    pageSize: z.number().int().min(10).max(100).default(25),
+    resultState: z.union([auditHistoryResultStateSchema, z.literal("all")]).default("all"),
+    search: z.string().trim().max(200).default(""),
+    state: z.union([auditJobStateSchema, z.literal("all")]).default("all"),
+  })
+  .strict()
+  .refine(
+    (query) =>
+      query.dateFrom === undefined ||
+      query.dateTo === undefined ||
+      Date.parse(query.dateFrom) <= Date.parse(query.dateTo),
+    { message: "The start date must not be later than the end date", path: ["dateFrom"] },
+  );
+export const auditHistoryListResultSchema = z
+  .object({
+    items: z.array(auditHistoryRecordSchema),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const REPORT_ARTIFACT_FORMATS = AUDIT_SCOPE_REPORT_FORMATS;
+export const REPORT_ARTIFACT_STATUSES = [
+  "available",
+  "missing",
+  "generation-failed",
+  "expired",
+] as const;
+export const reportArtifactFormatSchema = auditScopeReportFormatSchema;
+export const reportArtifactStatusSchema = z.enum(REPORT_ARTIFACT_STATUSES);
+export const reportArtifactRecordSchema = z
+  .object({
+    auditId: z.string().trim().min(1).max(200),
+    clientBusinessName: z.string().trim().min(1).max(200),
+    clientId: clientIdSchema,
+    createdAt: z.iso.datetime(),
+    fileName: z.string().trim().min(1).max(255),
+    format: reportArtifactFormatSchema,
+    id: z.uuid(),
+    jobId: z.uuid(),
+    retainedUntil: z.iso.datetime().nullable(),
+    status: reportArtifactStatusSchema,
+    targetUrl: z.url(),
+    updatedAt: z.iso.datetime(),
+    verifiedAt: z.iso.datetime().nullable(),
+    websiteId: z.uuid(),
+  })
+  .strict();
+export const reportArtifactListQuerySchema = z
+  .object({
+    clientId: clientIdSchema.optional(),
+    format: z.union([reportArtifactFormatSchema, z.literal("all")]).default("all"),
+    jobId: z.uuid().optional(),
+    page: z.number().int().min(1).max(100_000).default(1),
+    pageSize: z.number().int().min(10).max(100).default(25),
+    search: z.string().trim().max(200).default(""),
+    status: z.union([reportArtifactStatusSchema, z.literal("all")]).default("all"),
+  })
+  .strict();
+export const reportArtifactListResultSchema = z
+  .object({
+    items: z.array(reportArtifactRecordSchema),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+export const reportArtifactActionRequestSchema = z.object({ artifactId: z.uuid() }).strict();
+export const reportArtifactActionResultSchema = z.discriminatedUnion("ok", [
+  z
+    .object({
+      action: z.enum(["opened", "revealed", "exported"]),
+      ok: z.literal(true),
+    })
+    .strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum([
+            "not-found",
+            "unavailable",
+            "expired",
+            "unsafe-path",
+            "cancelled",
+            "open-failed",
+            "export-failed",
+          ]),
+          message: z.string().trim().min(1).max(1_000),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
 export const serviceStateSchema = z.enum(["ready", "unavailable"]);
 
 export const workspaceSummarySchema = z
@@ -566,8 +703,19 @@ export type AuditJobListResult = z.infer<typeof auditJobListResultSchema>;
 export type AuditJobMutationResult = z.infer<typeof auditJobMutationResultSchema>;
 export type AuditJobRecord = z.infer<typeof auditJobRecordSchema>;
 export type AuditJobState = z.infer<typeof auditJobStateSchema>;
+export type AuditHistoryListQuery = z.infer<typeof auditHistoryListQuerySchema>;
+export type AuditHistoryListResult = z.infer<typeof auditHistoryListResultSchema>;
+export type AuditHistoryRecord = z.infer<typeof auditHistoryRecordSchema>;
+export type AuditHistoryResultState = z.infer<typeof auditHistoryResultStateSchema>;
+export type AuditResultSummary = z.infer<typeof auditResultSummarySchema>;
 export type PageSelectionAction = z.infer<typeof pageSelectionActionSchema>;
 export type PageSelectionResult = z.infer<typeof pageSelectionResultSchema>;
+export type ReportArtifactActionResult = z.infer<typeof reportArtifactActionResultSchema>;
+export type ReportArtifactFormat = z.infer<typeof reportArtifactFormatSchema>;
+export type ReportArtifactListQuery = z.infer<typeof reportArtifactListQuerySchema>;
+export type ReportArtifactListResult = z.infer<typeof reportArtifactListResultSchema>;
+export type ReportArtifactRecord = z.infer<typeof reportArtifactRecordSchema>;
+export type ReportArtifactStatus = z.infer<typeof reportArtifactStatusSchema>;
 export type WebsitePageListQuery = z.infer<typeof websitePageListQuerySchema>;
 export type WebsitePageListResult = z.infer<typeof websitePageListResultSchema>;
 export type WebsitePageRecord = z.infer<typeof websitePageRecordSchema>;
@@ -587,15 +735,26 @@ export interface DesktopApi {
   discoverWebsitePages(
     request: z.infer<typeof discoverWebsitePagesRequestSchema>,
   ): Promise<DiscoveryResult>;
+  exportReport(
+    request: z.infer<typeof reportArtifactActionRequestSchema>,
+  ): Promise<ReportArtifactActionResult>;
   getBootstrap(): Promise<DesktopBootstrap>;
   getAuditScope(
     request: z.infer<typeof getAuditScopeRequestSchema>,
   ): Promise<AuditScopeRecord | null>;
   getAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobRecord | null>;
   getClient(request: z.infer<typeof getClientRequestSchema>): Promise<ClientRecord | null>;
+  listAuditHistory(query: AuditHistoryListQuery): Promise<AuditHistoryListResult>;
   listAuditJobs(query: AuditJobListQuery): Promise<AuditJobListResult>;
   listClients(query: ClientListQuery): Promise<ClientListResult>;
+  listReportArtifacts(query: ReportArtifactListQuery): Promise<ReportArtifactListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;
+  openReport(
+    request: z.infer<typeof reportArtifactActionRequestSchema>,
+  ): Promise<ReportArtifactActionResult>;
+  revealReport(
+    request: z.infer<typeof reportArtifactActionRequestSchema>,
+  ): Promise<ReportArtifactActionResult>;
   retryAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
   setClientStatus(
     request: z.infer<typeof setClientStatusRequestSchema>,

@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import { parseAuditConfig } from "../../src/config/audit-config.js";
 import {
   applyPageSelectionRequestSchema,
+  auditHistoryListQuerySchema,
   auditJobListQuerySchema,
   clientInputSchema,
   clientListQuerySchema,
   createAuditScopeRequestSchema,
   desktopBootstrapSchema,
   discoverWebsitePagesRequestSchema,
+  reportArtifactActionRequestSchema,
+  reportArtifactListQuerySchema,
   websitePageListQuerySchema,
 } from "../../src/desktop/shared/contracts.js";
 import {
@@ -154,6 +157,31 @@ describe("desktop contracts", () => {
         stage: "scanning",
         type: "audit-progress",
         warnings: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("keeps history filters bounded and report actions identifier-only", () => {
+    const artifactId = "58c4439a-30fd-42b7-b742-28d5b6f66781";
+    expect(auditHistoryListQuerySchema.parse({})).toEqual({
+      page: 1,
+      pageSize: 25,
+      resultState: "all",
+      search: "",
+      state: "all",
+    });
+    expect(reportArtifactListQuerySchema.parse({})).toEqual({
+      format: "all",
+      page: 1,
+      pageSize: 25,
+      search: "",
+      status: "all",
+    });
+    expect(reportArtifactActionRequestSchema.parse({ artifactId })).toEqual({ artifactId });
+    expect(
+      reportArtifactActionRequestSchema.safeParse({
+        artifactId,
+        path: "C:/private/audit-report.pdf",
       }).success,
     ).toBe(false);
   });

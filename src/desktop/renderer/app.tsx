@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import type { DesktopBootstrap } from "../shared/contracts.js";
+import { AuditJobs } from "./audits/audit-jobs.js";
 import { ClientWorkspace } from "./clients/client-workspace.js";
 
 const destinations = [
@@ -331,12 +332,24 @@ export function App(): React.JSX.Element {
           )}
           {state.type === "ready" && destination === "overview" && <Overview data={state.data} />}
           {state.type === "ready" && destination === "clients" && <ClientWorkspace />}
+          {state.type === "ready" && destination === "audits" && (
+            <section aria-labelledby="audit-jobs-title" className="section-block">
+              <div className="section-heading">
+                <div>
+                  <h2 id="audit-jobs-title">Audit activity</h2>
+                  <p>Background audits across the local client workspace.</p>
+                </div>
+              </div>
+              <AuditJobs />
+            </section>
+          )}
           {state.type === "ready" && destination === "settings" && (
             <SettingsView data={state.data} />
           )}
           {state.type === "ready" &&
             destination !== "overview" &&
             destination !== "clients" &&
+            destination !== "audits" &&
             destination !== "settings" && <EmptyDestination destination={destination} />}
         </div>
       </main>

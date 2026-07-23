@@ -4,16 +4,21 @@ import { PAGE_TYPES, pageTypeSchema } from "../../core/schemas.js";
 
 export const IPC_CHANNELS = {
   applyPageSelection: "desktop:pages:select",
+  cancelAuditJob: "desktop:audits:cancel",
   createClient: "desktop:clients:create",
   createAuditScope: "desktop:scopes:create",
   deleteClient: "desktop:clients:delete",
   discoverWebsitePages: "desktop:pages:discover",
+  getAuditJob: "desktop:audits:get",
   getBootstrap: "desktop:get-bootstrap",
   getAuditScope: "desktop:scopes:get",
   getClient: "desktop:clients:get",
+  listAuditJobs: "desktop:audits:list",
   listClients: "desktop:clients:list",
   listWebsitePages: "desktop:pages:list",
+  retryAuditJob: "desktop:audits:retry",
   setClientStatus: "desktop:clients:set-status",
+  startAuditJob: "desktop:audits:start",
   updateClient: "desktop:clients:update",
 } as const;
 
@@ -411,6 +416,106 @@ export const createAuditScopeResultSchema = z.discriminatedUnion("ok", [
 ]);
 export const getAuditScopeRequestSchema = z.object({ id: z.uuid() }).strict();
 
+export const AUDIT_JOB_STATES = [
+  "queued",
+  "discovering",
+  "scanning",
+  "generating-reports",
+  "completed",
+  "partially-completed",
+  "failed",
+  "cancelled",
+] as const;
+export const auditJobStateSchema = z.enum(AUDIT_JOB_STATES);
+export const auditJobFailureSchema = z
+  .object({
+    code: z.string().trim().min(1).max(80),
+    message: z.string().trim().min(1).max(1_000),
+  })
+  .strict();
+export const auditJobRecordSchema = z
+  .object({
+    attempt: z.number().int().positive().max(100),
+    cancelAvailable: z.boolean(),
+    cancelRequestedAt: z.iso.datetime().nullable(),
+    clientBusinessName: z.string().trim().min(1).max(200),
+    clientId: clientIdSchema,
+    completedAt: z.iso.datetime().nullable(),
+    createdAt: z.iso.datetime(),
+    failedPageCount: z.number().int().nonnegative().max(100),
+    failure: auditJobFailureSchema.nullable(),
+    id: z.uuid(),
+    pagesCompleted: z.number().int().nonnegative().max(100),
+    pagesTotal: z.number().int().positive().max(100),
+    scopeId: z.uuid(),
+    startedAt: z.iso.datetime().nullable(),
+    state: auditJobStateSchema,
+    targetUrl: z.url(),
+    updatedAt: z.iso.datetime(),
+    warningCount: z.number().int().nonnegative().max(50),
+    warnings: z.array(z.string().trim().min(1).max(500)).max(50),
+    websiteId: z.uuid(),
+  })
+  .strict()
+  .superRefine((job, context) => {
+    if (job.pagesCompleted > job.pagesTotal) {
+      context.addIssue({
+        code: "custom",
+        message: "Completed page count cannot exceed the job total",
+        path: ["pagesCompleted"],
+      });
+    }
+    if (job.warningCount !== job.warnings.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Warning count must match the stored warnings",
+        path: ["warningCount"],
+      });
+    }
+  });
+export const auditJobListQuerySchema = z
+  .object({
+    clientId: clientIdSchema.optional(),
+    page: z.number().int().min(1).max(100_000).default(1),
+    pageSize: z.number().int().min(1).max(100).default(25),
+    states: z
+      .array(auditJobStateSchema)
+      .max(AUDIT_JOB_STATES.length)
+      .refine((states) => new Set(states).size === states.length, "Job states must be unique")
+      .default([]),
+  })
+  .strict();
+export const auditJobListResultSchema = z
+  .object({
+    items: z.array(auditJobRecordSchema),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+export const startAuditJobRequestSchema = z.object({ scopeId: z.uuid() }).strict();
+export const auditJobIdRequestSchema = z.object({ id: z.uuid() }).strict();
+export const auditJobMutationResultSchema = z.discriminatedUnion("ok", [
+  z.object({ job: auditJobRecordSchema, ok: z.literal(true) }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum([
+            "not-found",
+            "worker-unavailable",
+            "not-cancellable",
+            "not-retryable",
+            "transition-conflict",
+          ]),
+          message: z.string().trim().min(1).max(1_000),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
 export const serviceStateSchema = z.enum(["ready", "unavailable"]);
 
 export const workspaceSummarySchema = z
@@ -456,6 +561,11 @@ export type AuditScopeConfiguration = z.infer<typeof auditScopeConfigurationSche
 export type AuditScopeRecord = z.infer<typeof auditScopeRecordSchema>;
 export type CreateAuditScopeResult = z.infer<typeof createAuditScopeResultSchema>;
 export type AuditScopeReportFormat = z.infer<typeof auditScopeReportFormatSchema>;
+export type AuditJobListQuery = z.infer<typeof auditJobListQuerySchema>;
+export type AuditJobListResult = z.infer<typeof auditJobListResultSchema>;
+export type AuditJobMutationResult = z.infer<typeof auditJobMutationResultSchema>;
+export type AuditJobRecord = z.infer<typeof auditJobRecordSchema>;
+export type AuditJobState = z.infer<typeof auditJobStateSchema>;
 export type PageSelectionAction = z.infer<typeof pageSelectionActionSchema>;
 export type PageSelectionResult = z.infer<typeof pageSelectionResultSchema>;
 export type WebsitePageListQuery = z.infer<typeof websitePageListQuerySchema>;
@@ -468,6 +578,7 @@ export interface DesktopApi {
   applyPageSelection(
     request: z.infer<typeof applyPageSelectionRequestSchema>,
   ): Promise<PageSelectionResult>;
+  cancelAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
   createClient(input: ClientInput): Promise<ClientMutationResult>;
   createAuditScope(
     request: z.infer<typeof createAuditScopeRequestSchema>,
@@ -480,11 +591,17 @@ export interface DesktopApi {
   getAuditScope(
     request: z.infer<typeof getAuditScopeRequestSchema>,
   ): Promise<AuditScopeRecord | null>;
+  getAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobRecord | null>;
   getClient(request: z.infer<typeof getClientRequestSchema>): Promise<ClientRecord | null>;
+  listAuditJobs(query: AuditJobListQuery): Promise<AuditJobListResult>;
   listClients(query: ClientListQuery): Promise<ClientListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;
+  retryAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
   setClientStatus(
     request: z.infer<typeof setClientStatusRequestSchema>,
   ): Promise<ClientMutationResult>;
+  startAuditJob(
+    request: z.infer<typeof startAuditJobRequestSchema>,
+  ): Promise<AuditJobMutationResult>;
   updateClient(request: z.infer<typeof updateClientRequestSchema>): Promise<ClientMutationResult>;
 }

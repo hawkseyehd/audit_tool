@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WebsitePages } from "../../src/desktop/renderer/clients/website-pages.js";
 import type {
+  AuditJobRecord,
   AuditScopeRecord,
   DesktopApi,
   DiscoveryRun,
@@ -108,20 +109,47 @@ const scope: AuditScopeRecord = {
   targetUrl: "https://northstar.test/",
   websiteId: "88c4439a-30fd-42b7-b742-28d5b6f66784",
 };
+const queuedJob: AuditJobRecord = {
+  attempt: 1,
+  cancelAvailable: true,
+  cancelRequestedAt: null,
+  clientBusinessName: scope.clientBusinessName,
+  clientId,
+  completedAt: null,
+  createdAt: "2026-07-23T12:01:00.000Z",
+  failedPageCount: 0,
+  failure: null,
+  id: "98c4439a-30fd-42b7-b742-28d5b6f66785",
+  pagesCompleted: 0,
+  pagesTotal: 1,
+  scopeId: scope.id,
+  startedAt: null,
+  state: "queued",
+  targetUrl: scope.targetUrl,
+  updatedAt: "2026-07-23T12:01:00.000Z",
+  warningCount: 0,
+  warnings: [],
+  websiteId: scope.websiteId,
+};
 
 function installApi(overrides: Partial<DesktopApi>): void {
   const api: DesktopApi = {
     applyPageSelection: vi.fn(),
+    cancelAuditJob: vi.fn(),
     createClient: vi.fn(),
     createAuditScope: vi.fn(),
     deleteClient: vi.fn(),
     discoverWebsitePages: vi.fn(),
     getBootstrap: vi.fn(),
+    getAuditJob: vi.fn(),
     getAuditScope: vi.fn(),
     getClient: vi.fn(),
+    listAuditJobs: vi.fn(),
     listClients: vi.fn(),
     listWebsitePages: vi.fn(),
     setClientStatus: vi.fn(),
+    retryAuditJob: vi.fn(),
+    startAuditJob: vi.fn(),
     updateClient: vi.fn(),
     ...overrides,
   };
@@ -188,7 +216,10 @@ describe("WebsitePages", () => {
     const createAuditScope = vi
       .fn<DesktopApi["createAuditScope"]>()
       .mockResolvedValue({ ok: true, scope });
-    installApi({ applyPageSelection, createAuditScope, listWebsitePages });
+    const startAuditJob = vi
+      .fn<DesktopApi["startAuditJob"]>()
+      .mockResolvedValue({ job: queuedJob, ok: true });
+    installApi({ applyPageSelection, createAuditScope, listWebsitePages, startAuditJob });
     const user = userEvent.setup();
     render(<WebsitePages clientId={clientId} websiteUrl="https://northstar.test/" />);
 
@@ -203,5 +234,9 @@ describe("WebsitePages", () => {
     expect(createAuditScope).toHaveBeenCalledOnce();
     expect(await screen.findByText("Audit scope locked")).toBeTruthy();
     expect(screen.getByText("1 page · 78c4439a")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Start audit" }));
+
+    expect(startAuditJob).toHaveBeenCalledWith({ scopeId: scope.id });
+    expect(await screen.findByText("queued")).toBeTruthy();
   });
 });

@@ -181,6 +181,58 @@ describe("crawlWebsite", () => {
     expect(JSON.stringify(result)).not.toContain("<title>");
     expect(JSON.stringify(result)).not.toContain("session=secret");
   });
+
+  it("processes only explicit immutable scope URLs when link following is disabled", async () => {
+    const calls: string[] = [];
+    const progress: { completed: number; total: number }[] = [];
+    const config = parseAuditConfig({
+      targetUrl: "example.com",
+      maxPages: 2,
+      concurrency: 2,
+      crawlDelayMs: 0,
+    });
+
+    const result = await crawlWebsite(
+      {
+        config,
+        followLinks: false,
+        onPageProcessed: (_page, completed, total) => progress.push({ completed, total }),
+        seedUrls: ["https://example.com/", "https://example.com/contact"],
+      },
+      {
+        fetchPage: (url) => {
+          calls.push(url);
+          return Promise.resolve(htmlPage(url, '<a href="/not-in-scope">Do not crawl</a>'));
+        },
+        now: sequentialClock(),
+        sleep: () => Promise.resolve(),
+      },
+    );
+
+    expect(new Set(calls)).toEqual(
+      new Set(["https://example.com/", "https://example.com/contact"]),
+    );
+    expect(calls).not.toContain("https://example.com/not-in-scope");
+    expect(result.stats).toMatchObject({ attemptedPages: 2, discoveredUrls: 2 });
+    expect(progress.at(-1)).toEqual({ completed: 2, total: 2 });
+  });
+
+  it("rejects explicit seed URLs outside the configured target scope", async () => {
+    const fetchPage = vi.fn<PageFetcher>();
+    const config = parseAuditConfig({ targetUrl: "example.com", maxPages: 1 });
+
+    await expect(
+      crawlWebsite(
+        {
+          config,
+          followLinks: false,
+          seedUrls: ["https://outside.test/"],
+        },
+        { fetchPage },
+      ),
+    ).rejects.toThrow("outside the allowed target scope");
+    expect(fetchPage).not.toHaveBeenCalled();
+  });
 });
 
 function htmlPage(url: string, body: string): FetchedPage {

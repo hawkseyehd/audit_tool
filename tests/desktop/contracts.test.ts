@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { parseAuditConfig } from "../../src/config/audit-config.js";
 import {
   applyPageSelectionRequestSchema,
+  auditJobListQuerySchema,
   clientInputSchema,
   clientListQuerySchema,
   createAuditScopeRequestSchema,
@@ -9,7 +11,10 @@ import {
   discoverWebsitePagesRequestSchema,
   websitePageListQuerySchema,
 } from "../../src/desktop/shared/contracts.js";
-import { workerRequestSchema } from "../../src/desktop/shared/worker-contracts.js";
+import {
+  workerRequestSchema,
+  workerResponseSchema,
+} from "../../src/desktop/shared/worker-contracts.js";
 
 const validBootstrap = {
   app: { name: "Website Audit Tool", platform: "win32", version: "0.1.0" },
@@ -107,6 +112,48 @@ describe("desktop contracts", () => {
           viewports: ["desktop"],
         },
         reportFormats: ["pdf"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates bounded audit job queries and exact worker page lists", () => {
+    const id = "953c75a4-6293-4fbc-bfe6-595f68368c1c";
+    const jobId = "58c4439a-30fd-42b7-b742-28d5b6f66781";
+    const config = parseAuditConfig({ maxPages: 2, targetUrl: "example.com" });
+
+    expect(auditJobListQuerySchema.parse({})).toEqual({
+      page: 1,
+      pageSize: 25,
+      states: [],
+    });
+    expect(
+      workerRequestSchema.safeParse({
+        config,
+        id,
+        jobId,
+        pageUrls: ["https://example.com/", "https://example.com/contact"],
+        type: "run-audit",
+      }).success,
+    ).toBe(true);
+    expect(
+      workerRequestSchema.safeParse({
+        config,
+        id,
+        jobId,
+        pageUrls: ["https://example.com/", "https://example.com/"],
+        type: "run-audit",
+      }).success,
+    ).toBe(false);
+    expect(
+      workerResponseSchema.safeParse({
+        failedPageCount: 2,
+        id,
+        jobId,
+        pagesCompleted: 1,
+        pagesTotal: 2,
+        stage: "scanning",
+        type: "audit-progress",
+        warnings: [],
       }).success,
     ).toBe(false);
   });

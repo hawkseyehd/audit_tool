@@ -1,5 +1,4 @@
 import { launch } from "chrome-launcher";
-import lighthouse from "lighthouse";
 import { prioritizePagesForScanning } from "../../classifiers/page-scan-priority.js";
 import { assertPublicNetworkTarget } from "../../url/network-safety.js";
 import { lighthousePageResultSchema } from "./schemas.js";
@@ -79,6 +78,7 @@ const defaultChromeLauncher: LighthouseChromeLauncher = async () => {
 };
 
 const defaultLighthouseRunner: LighthouseRunner = async ({ url, viewport, port }) => {
+  const lighthouse = (await import("lighthouse")).default;
   const mobile = viewport === "mobile";
   const result = await lighthouse(url, {
     port,

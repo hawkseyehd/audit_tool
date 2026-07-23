@@ -20,13 +20,16 @@ function installApi(api: DesktopApi): void {
 function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
   return {
     applyPageSelection: vi.fn(),
+    cancelAuditJob: vi.fn(),
     createClient: vi.fn(),
     createAuditScope: vi.fn(),
     deleteClient: vi.fn(),
     discoverWebsitePages: vi.fn(),
     getBootstrap: vi.fn().mockResolvedValue(bootstrap),
+    getAuditJob: vi.fn(),
     getAuditScope: vi.fn(),
     getClient: vi.fn(),
+    listAuditJobs: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listWebsitePages: vi.fn().mockResolvedValue({
       items: [],
@@ -44,6 +47,8 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       total: 0,
     }),
     setClientStatus: vi.fn(),
+    retryAuditJob: vi.fn(),
+    startAuditJob: vi.fn(),
     updateClient: vi.fn(),
     ...overrides,
   };
@@ -86,5 +91,20 @@ describe("desktop renderer", () => {
       expect(getBootstrap).toHaveBeenCalledTimes(2);
     });
     expect(await screen.findByRole("heading", { name: "Workspace" })).toBeTruthy();
+  });
+
+  it("opens the durable audit monitor from the main navigation", async () => {
+    const listAuditJobs = vi
+      .fn<DesktopApi["listAuditJobs"]>()
+      .mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 });
+    installApi(createApi({ listAuditJobs }));
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Workspace" });
+    fireEvent.click(screen.getByRole("button", { name: "Audits" }));
+
+    expect(screen.getByRole("heading", { name: "Audits" })).toBeTruthy();
+    expect(await screen.findByText("No audits recorded")).toBeTruthy();
+    expect(listAuditJobs).toHaveBeenCalledWith({ page: 1, pageSize: 25, states: [] });
   });
 });

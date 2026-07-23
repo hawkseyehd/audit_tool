@@ -6,6 +6,7 @@ import {
   Filter,
   Globe,
   LockKeyhole,
+  Play,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import {
   PAGE_TYPES,
   type AuditScopeConfiguration,
   type AuditScopeRecord,
+  type AuditJobRecord,
   type PageSelectionAction,
   type WebsitePageListQuery,
   type WebsitePageListResult,
@@ -144,6 +146,7 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
   const [discoveryError, setDiscoveryError] = useState<string>();
   const [selectionWorking, setSelectionWorking] = useState(false);
   const [scope, setScope] = useState<AuditScopeRecord>();
+  const [job, setJob] = useState<AuditJobRecord>();
   const selectVisibleRef = useRef<HTMLInputElement>(null);
 
   const loadPages = useCallback(async () => {
@@ -231,6 +234,45 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
     }
   };
 
+  const startAudit = async (): Promise<void> => {
+    if (scope === undefined) return;
+    setSelectionWorking(true);
+    setDiscoveryError(undefined);
+    try {
+      const result = await window.auditTool.startAuditJob({ scopeId: scope.id });
+      if (result.ok) setJob(result.job);
+      else setDiscoveryError(result.error.message);
+    } catch (error) {
+      setDiscoveryError(error instanceof Error ? error.message : "The audit could not be started");
+    } finally {
+      setSelectionWorking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (
+      job === undefined ||
+      !["queued", "discovering", "scanning", "generating-reports"].includes(job.state)
+    ) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      void window.auditTool
+        .getAuditJob({ id: job.id })
+        .then((updated) => {
+          if (updated !== null) setJob(updated);
+        })
+        .catch((error: unknown) => {
+          setDiscoveryError(
+            error instanceof Error ? error.message : "Audit progress could not be refreshed",
+          );
+        });
+    }, 1_000);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [job]);
+
   const setFilter = <Key extends keyof WebsitePageListQuery>(
     key: Key,
     value: WebsitePageListQuery[Key],
@@ -312,6 +354,21 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
                   {scope.selectedPageCount === 1 ? "page" : "pages"} · {scope.id.slice(0, 8)}
                 </span>
               </div>
+              {job === undefined ? (
+                <button
+                  className="button primary compact-button"
+                  disabled={selectionWorking}
+                  onClick={() => void startAudit()}
+                  type="button"
+                >
+                  <Play aria-hidden="true" size={15} />
+                  Start audit
+                </button>
+              ) : (
+                <span className={`audit-job-status audit-job-status-${job.state}`}>
+                  {job.state.replaceAll("-", " ")}
+                </span>
+              )}
             </div>
           )}
 

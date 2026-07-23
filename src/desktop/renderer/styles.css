@@ -1058,6 +1058,168 @@ button:focus-visible {
   font-size: 0.8125rem;
 }
 
+.scope-notice .button,
+.scope-notice > .audit-job-status {
+  flex: none;
+  margin-left: auto;
+}
+
+.compact-button {
+  min-height: 2.25rem;
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8125rem;
+}
+
+.audit-jobs {
+  min-width: 0;
+}
+
+.audit-action-error {
+  margin: var(--space-lg) var(--space-xl);
+}
+
+.audit-table {
+  width: 100%;
+  min-width: 56rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.audit-table th,
+.audit-table td {
+  padding: var(--space-md);
+  border-bottom: 0.0625rem solid var(--rule);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.audit-table th {
+  background: var(--surface-subtle);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.audit-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.audit-table time {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.audit-identity {
+  display: flex;
+  min-width: 10rem;
+  max-width: 24rem;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.audit-identity span,
+.audit-identity small,
+.audit-warning-count,
+.audit-progress span {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+}
+
+.audit-failure-message {
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
+.audit-warning-message {
+  color: var(--warning-ink);
+  overflow-wrap: anywhere;
+}
+
+.audit-job-status {
+  display: inline-flex;
+  min-height: 1.625rem;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.125rem var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.audit-job-status-queued,
+.audit-job-status-cancelled {
+  background: #e9edf2;
+  color: #485669;
+}
+
+.audit-job-status-discovering,
+.audit-job-status-scanning,
+.audit-job-status-generating-reports {
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+
+.audit-job-status-completed {
+  background: var(--success-tint);
+  color: var(--success-ink);
+}
+
+.audit-job-status-partially-completed {
+  background: var(--warning-tint);
+  color: var(--warning-ink);
+}
+
+.audit-job-status-failed {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+.audit-warning-count {
+  display: block;
+  margin-top: var(--space-xs);
+}
+
+.audit-progress {
+  display: grid;
+  min-width: 8rem;
+  gap: var(--space-xs);
+}
+
+.audit-progress progress {
+  width: 100%;
+  height: 0.5rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  accent-color: var(--primary);
+}
+
+.audit-progress progress::-webkit-progress-bar {
+  background: #e5ebf2;
+}
+
+.audit-progress progress::-webkit-progress-value {
+  background: var(--primary);
+}
+
+.audit-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.audit-table-state,
+.audit-empty {
+  min-height: 16rem;
+}
+
 .page-inventory-empty {
   min-height: 18rem;
 }
@@ -1351,6 +1513,24 @@ button:focus-visible {
 
   .selection-toolbar > div {
     justify-content: flex-start;
+  }
+
+  .scope-notice {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .scope-notice .button,
+  .scope-notice > .audit-job-status {
+    margin-left: 0;
+  }
+
+  .audit-table {
+    min-width: 44rem;
+  }
+
+  .audit-updated-column {
+    display: none;
   }
 }
 

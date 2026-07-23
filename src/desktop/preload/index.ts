@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer } from "electron";
 
 import {
   applyPageSelectionRequestSchema,
+  auditJobIdRequestSchema,
+  auditJobListQuerySchema,
+  auditJobListResultSchema,
+  auditJobMutationResultSchema,
+  auditJobRecordSchema,
   auditScopeRecordSchema,
   clientInputSchema,
   clientListQuerySchema,
@@ -20,6 +25,7 @@ import {
   IPC_CHANNELS,
   pageSelectionResultSchema,
   setClientStatusRequestSchema,
+  startAuditJobRequestSchema,
   updateClientRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
@@ -31,6 +37,12 @@ const desktopApi: DesktopApi = {
     const request = applyPageSelectionRequestSchema.parse(input);
     return pageSelectionResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.applyPageSelection, request),
+    );
+  },
+  async cancelAuditJob(input) {
+    const request = auditJobIdRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.cancelAuditJob, request),
     );
   },
   async createAuditScope(input) {
@@ -60,6 +72,11 @@ const desktopApi: DesktopApi = {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getAuditScope, request);
     return result === null ? null : auditScopeRecordSchema.parse(result);
   },
+  async getAuditJob(input) {
+    const request = auditJobIdRequestSchema.parse(input);
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getAuditJob, request);
+    return result === null ? null : auditJobRecordSchema.parse(result);
+  },
   async discoverWebsitePages(input) {
     const request = discoverWebsitePagesRequestSchema.parse(input);
     return discoveryResultSchema.parse(
@@ -77,6 +94,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.listClients, request),
     );
   },
+  async listAuditJobs(input) {
+    const request = auditJobListQuerySchema.parse(input);
+    return auditJobListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listAuditJobs, request),
+    );
+  },
   async listWebsitePages(input) {
     const request = websitePageListQuerySchema.parse(input);
     return websitePageListResultSchema.parse(
@@ -87,6 +110,18 @@ const desktopApi: DesktopApi = {
     const request = setClientStatusRequestSchema.parse(input);
     return clientMutationResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.setClientStatus, request),
+    );
+  },
+  async retryAuditJob(input) {
+    const request = auditJobIdRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.retryAuditJob, request),
+    );
+  },
+  async startAuditJob(input) {
+    const request = startAuditJobRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.startAuditJob, request),
     );
   },
   async updateClient(input) {

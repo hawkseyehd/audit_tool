@@ -2,6 +2,11 @@ import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
 
 import {
   applyPageSelectionRequestSchema,
+  auditJobIdRequestSchema,
+  auditJobListQuerySchema,
+  auditJobListResultSchema,
+  auditJobMutationResultSchema,
+  auditJobRecordSchema,
   auditScopeRecordSchema,
   clientInputSchema,
   clientListQuerySchema,
@@ -19,6 +24,7 @@ import {
   IPC_CHANNELS,
   setClientStatusRequestSchema,
   pageSelectionResultSchema,
+  startAuditJobRequestSchema,
   updateClientRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
@@ -117,6 +123,32 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     const request = getAuditScopeRequestSchema.parse(input);
     const scope = await services.database.getAuditScope(request.id);
     return scope === null ? null : auditScopeRecordSchema.parse(scope);
+  });
+  ipcMain.handle(IPC_CHANNELS.startAuditJob, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = startAuditJobRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(await services.jobs.start(request.scopeId));
+  });
+  ipcMain.handle(IPC_CHANNELS.getAuditJob, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = auditJobIdRequestSchema.parse(input);
+    const job = await services.jobs.get(request.id);
+    return job === null ? null : auditJobRecordSchema.parse(job);
+  });
+  ipcMain.handle(IPC_CHANNELS.listAuditJobs, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = auditJobListQuerySchema.parse(input);
+    return auditJobListResultSchema.parse(await services.jobs.list(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.cancelAuditJob, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = auditJobIdRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(await services.jobs.cancel(request.id));
+  });
+  ipcMain.handle(IPC_CHANNELS.retryAuditJob, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = auditJobIdRequestSchema.parse(input);
+    return auditJobMutationResultSchema.parse(await services.jobs.retry(request.id));
   });
 }
 

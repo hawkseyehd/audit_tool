@@ -36,6 +36,7 @@ model Client {
   tags         ClientTag[]
   activities   ClientActivity[]
   auditScopes  AuditScope[]
+  auditJobs    AuditJob[]
 
   @@index([status, updatedAt])
   @@index([searchText])
@@ -53,6 +54,7 @@ model Website {
   pages            WebsitePage[]
   discoveryRuns    DiscoveryRun[]
   auditScopes      AuditScope[]
+  auditJobs        AuditJob[]
 
   @@index([clientId])
 }
@@ -125,6 +127,7 @@ model AuditScope {
   client             Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
   website            Website          @relation(fields: [websiteId], references: [id], onDelete: Restrict)
   pages              AuditScopePage[]
+  job                AuditJob?
 
   @@index([clientId, createdAt])
   @@index([websiteId, createdAt])
@@ -139,6 +142,38 @@ model AuditScopePage {
 
   @@id([scopeId, pageId])
   @@index([scopeId, normalizedUrl])
+}
+
+model AuditJob {
+  id                 String     @id @default(uuid())
+  scopeId            String     @unique
+  clientId           String
+  websiteId          String
+  clientBusinessName String
+  targetUrl          String
+  state              String     @default("queued")
+  pagesCompleted     Int        @default(0)
+  pagesTotal         Int
+  failedPageCount    Int        @default(0)
+  warningCount       Int        @default(0)
+  warningsJson       String     @default("[]")
+  attempt            Int        @default(1)
+  failureCode        String?
+  failureMessage     String?
+  resultJson         String?
+  outputDirectory    String?
+  cancelRequestedAt  DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  scope              AuditScope @relation(fields: [scopeId], references: [id], onDelete: Restrict)
+  client             Client     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  website            Website    @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, createdAt])
+  @@index([state, createdAt])
+  @@index([websiteId, createdAt])
 }
 
 model Tag {

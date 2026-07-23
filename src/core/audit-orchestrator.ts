@@ -73,9 +73,23 @@ export interface AuditOrchestratorDependencies {
   readonly writePdfs?: typeof writePdfReports;
 }
 
+export interface AuditOrchestrationProgress {
+  readonly failedPageCount: number;
+  readonly pagesCompleted: number;
+  readonly pagesTotal: number;
+  readonly stage: "discovering" | "scanning" | "generating-reports";
+  readonly warnings: readonly string[];
+}
+
+export interface AuditOrchestrationOptions {
+  readonly onProgress?: (progress: AuditOrchestrationProgress) => void;
+  readonly signal?: AbortSignal;
+}
+
 export async function runAuditOrchestration(
   configInput: AuditConfig,
   dependencies: AuditOrchestratorDependencies = {},
+  options: AuditOrchestrationOptions = {},
 ): Promise<FullAuditRunResult> {
   const config = parseAuditConfig(configInput);
   const normalizedUrl = normalizeTargetUrl(config.targetUrl);
@@ -90,6 +104,10 @@ export async function runAuditOrchestration(
   const timeout = setTimeout(() => {
     deadline.abort(new Error("Audit deadline exceeded"));
   }, config.auditTimeoutMs);
+  const signal =
+    options.signal === undefined
+      ? deadline.signal
+      : AbortSignal.any([deadline.signal, options.signal]);
   const resources: CrawlPageResource[] = [];
   const findings: AuditFinding[] = [];
   const context: ScannerContext = { detectedAt: timestamp(now) };
@@ -97,27 +115,60 @@ export async function runAuditOrchestration(
   let inspectionResult: BrowserInspectionResult | undefined;
 
   try {
+    emitProgress(options, {
+      failedPageCount: 0,
+      pagesCompleted: 0,
+      pagesTotal: config.maxPages,
+      stage: "discovering",
+      warnings: [],
+    });
     try {
       crawlResult = await (dependencies.crawl ?? crawlWebsite)({
         config,
         onPageFetched: (resource) => resources.push(resource),
-        signal: deadline.signal,
+        onPageProcessed: (_page, completedPages, totalPages) => {
+          emitProgress(options, {
+            failedPageCount: 0,
+            pagesCompleted: completedPages,
+            pagesTotal: totalPages,
+            stage: "discovering",
+            warnings: [],
+          });
+        },
+        signal,
       });
     } catch (error: unknown) {
+      options.signal?.throwIfAborted();
       crawlResult = emptyCrawlResult(normalizedUrl, now);
       findings.push(
         operationalFinding("orchestrator", "crawl-failed", normalizedUrl, error, context),
       );
     }
 
-    if (crawlResult.pages.length > 0 && !deadline.signal.aborted) {
+    options.signal?.throwIfAborted();
+    const crawlFailedPageCount = crawlResult.pages.filter(
+      (page) => page.error !== undefined,
+    ).length;
+    const crawlWarnings =
+      crawlFailedPageCount === 0
+        ? []
+        : [`${String(crawlFailedPageCount)} scoped pages could not be fetched.`];
+    emitProgress(options, {
+      failedPageCount: crawlFailedPageCount,
+      pagesCompleted: crawlResult.pages.length,
+      pagesTotal: config.maxPages,
+      stage: "scanning",
+      warnings: crawlWarnings,
+    });
+
+    if (crawlResult.pages.length > 0 && !signal.aborted) {
       try {
         inspectionResult = await (dependencies.inspect ?? inspectPagesWithBrowser)({
           auditDirectory: directories.auditDirectory,
           config,
           pages: crawlResult.pages,
           screenshotsDirectory: directories.screenshotsDirectory,
-          signal: deadline.signal,
+          signal,
         });
         if (inspectionResult.runErrors.length > 0) {
           findings.push(
@@ -131,6 +182,7 @@ export async function runAuditOrchestration(
           );
         }
       } catch (error: unknown) {
+        options.signal?.throwIfAborted();
         findings.push(
           operationalFinding(
             "orchestrator",
@@ -145,10 +197,10 @@ export async function runAuditOrchestration(
 
     if (config.includeSeo) {
       findings.push(
-        ...(await runScanner("seo", normalizedUrl, context, deadline.signal, async () => {
+        ...(await runScanner("seo", normalizedUrl, context, signal, options.signal, async () => {
           const siteResources = await (
             dependencies.discoverSeoResources ?? defaultSeoResourceDiscovery
-          )(config, deadline.signal);
+          )(config, signal);
           return scanSeo(
             {
               crawlPages: crawlResult.pages,
@@ -170,7 +222,7 @@ export async function runAuditOrchestration(
 
     if (config.includeForms) {
       findings.push(
-        ...(await runScanner("forms", normalizedUrl, context, deadline.signal, () =>
+        ...(await runScanner("forms", normalizedUrl, context, signal, options.signal, () =>
           Promise.resolve(
             scanForms(
               {
@@ -187,7 +239,7 @@ export async function runAuditOrchestration(
 
     if (config.includeSecurity) {
       findings.push(
-        ...(await runScanner("security", normalizedUrl, context, deadline.signal, () =>
+        ...(await runScanner("security", normalizedUrl, context, signal, options.signal, () =>
           Promise.resolve(
             scanSecurity(
               {
@@ -213,7 +265,7 @@ export async function runAuditOrchestration(
 
     if (config.includeUxHeuristics) {
       findings.push(
-        ...(await runScanner("ux", normalizedUrl, context, deadline.signal, () =>
+        ...(await runScanner("ux", normalizedUrl, context, signal, options.signal, () =>
           Promise.resolve(
             scanUx(
               {
@@ -234,7 +286,7 @@ export async function runAuditOrchestration(
 
     if (config.includeAnalytics) {
       findings.push(
-        ...(await runScanner("analytics", normalizedUrl, context, deadline.signal, () =>
+        ...(await runScanner("analytics", normalizedUrl, context, signal, options.signal, () =>
           Promise.resolve(
             scanAnalytics(
               {
@@ -251,38 +303,51 @@ export async function runAuditOrchestration(
 
     if (config.includeAccessibility) {
       findings.push(
-        ...(await runScanner("accessibility", normalizedUrl, context, deadline.signal, async () =>
-          scanAccessibility(
-            {
-              results: await (dependencies.runAccessibility ?? runAccessibilityAudits)({
-                config,
-                pages: crawlResult.pages,
-                signal: deadline.signal,
-              }),
-            },
-            context,
-          ),
+        ...(await runScanner(
+          "accessibility",
+          normalizedUrl,
+          context,
+          signal,
+          options.signal,
+          async () =>
+            scanAccessibility(
+              {
+                results: await (dependencies.runAccessibility ?? runAccessibilityAudits)({
+                  config,
+                  pages: crawlResult.pages,
+                  signal,
+                }),
+              },
+              context,
+            ),
         )),
       );
     }
 
     if (config.includeLighthouse) {
       findings.push(
-        ...(await runScanner("lighthouse", normalizedUrl, context, deadline.signal, async () =>
-          scanLighthouse(
-            {
-              results: await (dependencies.runLighthouse ?? runLighthouseAudits)({
-                config,
-                pages: crawlResult.pages,
-                signal: deadline.signal,
-              }),
-            },
-            context,
-          ),
+        ...(await runScanner(
+          "lighthouse",
+          normalizedUrl,
+          context,
+          signal,
+          options.signal,
+          async () =>
+            scanLighthouse(
+              {
+                results: await (dependencies.runLighthouse ?? runLighthouseAudits)({
+                  config,
+                  pages: crawlResult.pages,
+                  signal,
+                }),
+              },
+              context,
+            ),
         )),
       );
     }
 
+    options.signal?.throwIfAborted();
     const scannedPages = mergeScannedPages(crawlResult.pages, inspectionResult);
     let auditResult = auditResultSchema.parse({
       schemaVersion: AUDIT_SCHEMA_VERSION,
@@ -296,20 +361,39 @@ export async function runAuditOrchestration(
       findings,
       outputs: { screenshotDirectory: directories.screenshotsDirectory },
     });
+    const operationalWarningCount = findings.filter(
+      (finding) => finding.category === "technical" && finding.severity === "info",
+    ).length;
+    const reportWarnings = [
+      ...crawlWarnings,
+      ...(operationalWarningCount === 0
+        ? []
+        : [`${String(operationalWarningCount)} audit checks reported operational warnings.`]),
+    ];
+    emitProgress(options, {
+      failedPageCount: crawlFailedPageCount,
+      pagesCompleted: scannedPages.length,
+      pagesTotal: config.maxPages,
+      stage: "generating-reports",
+      warnings: reportWarnings,
+    });
 
     if (config.writeHtml) {
+      options.signal?.throwIfAborted();
       auditResult = await (dependencies.writeHtml ?? writeHtmlReport)(
         directories.htmlDirectory,
         auditResult,
       );
     }
     if (config.writeMarkdown) {
+      options.signal?.throwIfAborted();
       auditResult = await (dependencies.writeMarkdown ?? writeMarkdownReport)(
         directories.markdownDirectory,
         auditResult,
       );
     }
     if (config.writeClientSummaryPdf || config.writePdf || config.writePdfSummary) {
+      options.signal?.throwIfAborted();
       auditResult = await (dependencies.writePdfs ?? writePdfReports)(
         directories.pdfDirectory,
         auditResult,
@@ -321,6 +405,7 @@ export async function runAuditOrchestration(
       );
     }
     if (config.writeJson) {
+      options.signal?.throwIfAborted();
       auditResult = await (dependencies.writeJson ?? writeJsonReport)(
         directories.jsonDirectory,
         auditResult,
@@ -333,17 +418,30 @@ export async function runAuditOrchestration(
   }
 }
 
+function emitProgress(
+  options: AuditOrchestrationOptions,
+  progress: AuditOrchestrationProgress,
+): void {
+  try {
+    options.onProgress?.(progress);
+  } catch {
+    // Progress reporting is observational and must never invalidate the audit.
+  }
+}
+
 async function runScanner(
   scanner: ScannerName,
   url: string,
   context: ScannerContext,
   signal: AbortSignal,
+  externalSignal: AbortSignal | undefined,
   operation: () => Promise<readonly AuditFinding[]>,
 ): Promise<readonly AuditFinding[]> {
   try {
     signal.throwIfAborted();
     return await operation();
   } catch (error: unknown) {
+    externalSignal?.throwIfAborted();
     return [operationalFinding(scanner, `${scanner}-scanner-failed`, url, error, context)];
   }
 }

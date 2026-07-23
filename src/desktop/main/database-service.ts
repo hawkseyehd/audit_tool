@@ -24,15 +24,17 @@ import {
   type WebsitePageListResult,
 } from "../shared/contracts.js";
 import { AuditScopeRepository } from "./audit-scope-repository.js";
+import { AuditJobRepository } from "./audit-job-repository.js";
 import { CLIENT_SCHEMA_STATEMENTS } from "./client-migrations.js";
 import { ClientRepository } from "./client-repository.js";
+import { JOB_SCHEMA_STATEMENTS } from "./job-migrations.js";
 import { PageDiscoveryService } from "./page-discovery-service.js";
 import { PageInventoryRepository } from "./page-inventory-repository.js";
 import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
 import { SCOPE_SCHEMA_STATEMENTS } from "./scope-migrations.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
@@ -40,6 +42,7 @@ export class DesktopDatabaseService {
   #clients: ClientRepository | undefined;
   #discovery: PageDiscoveryService | undefined;
   #initializedAt: string | undefined;
+  #jobs: AuditJobRepository | undefined;
   #pages: PageInventoryRepository | undefined;
   #scopes: AuditScopeRepository | undefined;
 
@@ -72,6 +75,9 @@ export class DesktopDatabaseService {
     for (const statement of SCOPE_SCHEMA_STATEMENTS) {
       await this.#client.$executeRawUnsafe(statement);
     }
+    for (const statement of JOB_SCHEMA_STATEMENTS) {
+      await this.#client.$executeRawUnsafe(statement);
+    }
     await this.#client.discoveryRun.updateMany({
       data: {
         completedAt: new Date(),
@@ -90,6 +96,7 @@ export class DesktopDatabaseService {
     this.#pages = new PageInventoryRepository(this.#client);
     this.#discovery = new PageDiscoveryService(this.#pages);
     this.#scopes = new AuditScopeRepository(this.#client);
+    this.#jobs = new AuditJobRepository(this.#client);
     this.#initializedAt = metadata.createdAt.toISOString();
   }
 
@@ -102,7 +109,7 @@ export class DesktopDatabaseService {
 
   async getWorkspaceSummary(): Promise<DesktopBootstrap["workspace"]> {
     return workspaceSummarySchema.parse({
-      audits: 0,
+      audits: await this.jobs.count(),
       clients: await this.#requireClients().count(),
       prospects: 0,
       reports: 0,
@@ -161,11 +168,17 @@ export class DesktopDatabaseService {
     return this.#requireScopes().get(id);
   }
 
+  get jobs(): AuditJobRepository {
+    if (this.#jobs === undefined) throw new Error("Audit job repository is unavailable");
+    return this.#jobs;
+  }
+
   async close(): Promise<void> {
     const client = this.#client;
     this.#client = undefined;
     this.#clients = undefined;
     this.#discovery = undefined;
+    this.#jobs = undefined;
     this.#pages = undefined;
     this.#scopes = undefined;
     if (client !== undefined) {

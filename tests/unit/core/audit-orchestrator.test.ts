@@ -227,6 +227,103 @@ describe("runAuditOrchestration", () => {
     expect(outcome.auditResult.outputs.markdownReportPath).toContain("audit-report.md");
   });
 
+  it("reports durable stage and page progress without coupling it to the audit", async () => {
+    const outputDir = await createTemporaryDirectory();
+    const progress: {
+      pagesCompleted: number;
+      stage: "discovering" | "scanning" | "generating-reports";
+    }[] = [];
+    const config = parseAuditConfig({
+      targetUrl: "example.com",
+      maxPages: 1,
+      outputDir,
+      includeAccessibility: false,
+      includeAnalytics: false,
+      includeForms: false,
+      includeLighthouse: false,
+      includeSecurity: false,
+      includeSeo: false,
+      includeUxHeuristics: false,
+      writeClientSummaryPdf: false,
+      writeHtml: false,
+      writeJson: false,
+      writeMarkdown: false,
+      writePdf: false,
+      writePdfSummary: false,
+    });
+
+    await runAuditOrchestration(
+      config,
+      {
+        createAuditId: () => "audit-progress-test",
+        crawl: (options) => {
+          options.onPageProcessed?.(
+            { pageType: "home", statusCode: 200, url: "https://example.com/" },
+            1,
+            1,
+          );
+          return Promise.resolve(crawlResult());
+        },
+        now: sequentialClock(),
+      },
+      {
+        onProgress: (update) =>
+          progress.push({ pagesCompleted: update.pagesCompleted, stage: update.stage }),
+      },
+    );
+
+    expect(progress).toEqual([
+      { pagesCompleted: 0, stage: "discovering" },
+      { pagesCompleted: 1, stage: "discovering" },
+      { pagesCompleted: 1, stage: "scanning" },
+      { pagesCompleted: 1, stage: "generating-reports" },
+    ]);
+  }, 15_000);
+
+  it("stops promptly when an external cancellation signal is raised", async () => {
+    const outputDir = await createTemporaryDirectory();
+    const controller = new AbortController();
+    let notifyCrawlStarted: (() => void) | undefined;
+    const crawlStarted = new Promise<void>((resolve) => {
+      notifyCrawlStarted = resolve;
+    });
+    const config = parseAuditConfig({
+      targetUrl: "example.com",
+      outputDir,
+      writeClientSummaryPdf: false,
+      writePdf: false,
+      writePdfSummary: false,
+    });
+    const run = runAuditOrchestration(
+      config,
+      {
+        createAuditId: () => "audit-cancel-test",
+        crawl: (options) =>
+          new Promise<CrawlResult>((_resolve, reject) => {
+            notifyCrawlStarted?.();
+            options.signal?.addEventListener(
+              "abort",
+              () => {
+                reject(
+                  options.signal?.reason instanceof Error
+                    ? options.signal.reason
+                    : new Error("Audit cancelled"),
+                );
+              },
+              { once: true },
+            );
+          }),
+        now: sequentialClock(),
+      },
+      { signal: controller.signal },
+    );
+
+    await crawlStarted;
+    controller.abort(new Error("Audit cancelled by user"));
+
+    await expect(run).rejects.toThrow("Audit cancelled by user");
+  });
+
   it("enforces the configured audit deadline and returns a partial result", async () => {
     vi.useFakeTimers();
     try {

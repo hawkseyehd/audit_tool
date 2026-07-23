@@ -1,6 +1,10 @@
 import type { ScannedPage } from "../core/types.js";
 import { classifyPage } from "../classifiers/page-classifier.js";
-import { createCrawlScope, type CrawlRejectionReason } from "../url/crawl-scope.js";
+import {
+  createCrawlScope,
+  evaluateCrawlCandidate,
+  type CrawlRejectionReason,
+} from "../url/crawl-scope.js";
 import { normalizeTargetUrl } from "../url/normalize-url.js";
 import { PageFetchError } from "./errors.js";
 import { createHttpPageFetcher } from "./http-page-fetcher.js";
@@ -41,13 +45,15 @@ export async function crawlWebsite(
   const fetchPage = dependencies.fetchPage ?? createHttpPageFetcher();
   const targetUrl = normalizeTargetUrl(config.targetUrl);
   const scope = createCrawlScope(targetUrl, config.allowedDomains);
+  const seedUrls = resolveSeedUrls(options.seedUrls, targetUrl, scope);
+  const followLinks = options.followLinks ?? true;
   const startedAt = now().toISOString();
-  const queue: QueueEntry[] = [createQueueEntry(targetUrl, 0)];
-  const seenUrls = new Set<string>([targetUrl]);
+  const queue: QueueEntry[] = seedUrls.map((url, index) => createQueueEntry(url, index));
+  const seenUrls = new Set<string>(seedUrls);
   const pages: ScannedPage[] = [];
   const rejectionCounts: Record<string, number> = {};
   const maxQueuedUrls = Math.max(100, config.maxPages * 20);
-  let discoveryOrder = 1;
+  let discoveryOrder = seedUrls.length;
 
   while (queue.length > 0 && pages.length < config.maxPages) {
     signal?.throwIfAborted();
@@ -61,12 +67,17 @@ export async function crawlWebsite(
 
     for (const processed of processedPages) {
       pages.push(processed.page);
+      options.onPageProcessed?.(
+        processed.page,
+        pages.length,
+        followLinks ? config.maxPages : Math.min(config.maxPages, seedUrls.length),
+      );
       if (processed.resource !== undefined) {
         options.onPageFetched?.({ ...processed.resource, page: processed.page });
       }
       mergeRejectionCounts(rejectionCounts, processed.rejectionCounts);
 
-      if (!processed.successful) {
+      if (!processed.successful || !followLinks) {
         continue;
       }
 
@@ -110,6 +121,25 @@ export async function crawlWebsite(
       rejectedLinks,
     },
   });
+}
+
+function resolveSeedUrls(
+  requestedUrls: readonly string[] | undefined,
+  targetUrl: string,
+  scope: ReturnType<typeof createCrawlScope>,
+): string[] {
+  if (requestedUrls === undefined) return [targetUrl];
+  if (requestedUrls.length === 0) throw new TypeError("At least one crawl seed URL is required");
+
+  const resolved: string[] = [];
+  for (const requestedUrl of requestedUrls) {
+    const decision = evaluateCrawlCandidate(requestedUrl, targetUrl, scope);
+    if (!decision.accepted) {
+      throw new TypeError(`Crawl seed URL is outside the allowed target scope: ${requestedUrl}`);
+    }
+    resolved.push(decision.url);
+  }
+  return [...new Set(resolved)];
 }
 
 async function processPage(

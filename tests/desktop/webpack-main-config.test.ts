@@ -6,6 +6,8 @@ import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 
 interface MainConfig {
+  externals: Record<string, string>;
+  output: { environment: { dynamicImport: boolean } };
   plugins: { apply(compiler: unknown): void }[];
 }
 
@@ -24,6 +26,15 @@ afterEach(async () => {
 });
 
 describe("desktop webpack main configuration", () => {
+  it("keeps browser runtimes external to the utility-process bundle", () => {
+    expect(mainConfig.externals).toMatchObject({
+      "@prisma/client": "commonjs2 @prisma/client",
+      lighthouse: "import lighthouse",
+      playwright: "commonjs2 playwright",
+    });
+    expect(mainConfig.output.environment.dynamicImport).toBe(true);
+  });
+
   it("writes the Electron development entry bridge beside the main bundle directory", async () => {
     const root = await mkdtemp(join(tmpdir(), "website-audit-webpack-main-"));
     temporaryDirectories.push(root);

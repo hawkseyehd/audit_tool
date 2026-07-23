@@ -2,11 +2,13 @@ import { app } from "electron";
 import type { Logger } from "pino";
 
 import { desktopBootstrapSchema, type DesktopBootstrap } from "../shared/contracts.js";
+import { AuditJobManager } from "./audit-job-manager.js";
 import { DesktopDatabaseService } from "./database-service.js";
 import { WorkerCoordinator } from "./worker-coordinator.js";
 
 export class ApplicationServices {
   readonly #database: DesktopDatabaseService;
+  readonly #jobs: AuditJobManager;
   readonly #logger: Logger;
   readonly #worker: WorkerCoordinator;
   #databaseReady = false;
@@ -15,6 +17,12 @@ export class ApplicationServices {
     this.#database = new DesktopDatabaseService(options.dataDirectory);
     this.#logger = options.logger;
     this.#worker = new WorkerCoordinator(options.logger);
+    this.#jobs = new AuditJobManager({
+      dataDirectory: options.dataDirectory,
+      database: this.#database,
+      logger: options.logger,
+      worker: this.#worker,
+    });
   }
 
   async initialize(): Promise<void> {
@@ -29,6 +37,9 @@ export class ApplicationServices {
     }
     if (workerResult.status === "rejected") {
       this.#logger.error({ error: workerResult.reason }, "Desktop worker failed to initialize");
+    }
+    if (databaseResult.status === "fulfilled" && workerResult.status === "fulfilled") {
+      await this.#jobs.initialize();
     }
   }
 
@@ -56,7 +67,13 @@ export class ApplicationServices {
     return this.#database;
   }
 
+  get jobs(): AuditJobManager {
+    return this.#jobs;
+  }
+
   async close(): Promise<void> {
-    await Promise.allSettled([this.#worker.stop(), this.#database.close()]);
+    await this.#jobs.stop();
+    await this.#worker.stop();
+    await this.#database.close();
   }
 }

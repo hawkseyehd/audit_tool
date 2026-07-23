@@ -2,7 +2,6 @@ import {
   Activity,
   Archive,
   ArrowLeft,
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -24,6 +23,7 @@ import type {
   ClientRecord,
   ClientStatus,
 } from "../../shared/contracts.js";
+import { AuditJobs } from "../audits/audit-jobs.js";
 import { ClientForm } from "./client-form.js";
 import { WebsitePages } from "./website-pages.js";
 
@@ -279,13 +279,7 @@ function ClientDetail(props: {
         {tab === "pages" && (
           <WebsitePages clientId={props.client.id} websiteUrl={props.client.websiteUrl} />
         )}
-        {tab === "audits" && (
-          <EmptyClientSection
-            icon={BarChart3}
-            title="No audits recorded"
-            text="Completed and active audits for this client will appear here."
-          />
-        )}
+        {tab === "audits" && <AuditJobs clientId={props.client.id} />}
         {tab === "reports" && (
           <EmptyClientSection
             icon={FileText}

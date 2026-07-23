@@ -18,6 +18,11 @@ module.exports = {
   packagerConfig: {
     asar: true,
     executableName: "website-audit-tool",
+    ignore: (file) => {
+      if (!file) return false;
+      if (/^[/\\]node_modules[/\\]\.pnpm(?:$|[/\\])/.test(file)) return true;
+      return !/^[/\\](?:\.webpack|node_modules)(?:$|[/\\])/.test(file);
+    },
     name: "Website Audit Tool",
     prune: true,
   },

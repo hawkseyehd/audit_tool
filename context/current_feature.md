@@ -1,4 +1,4 @@
-# Current Feature: Page Selection and Immutable Audit Scopes
+# Current Feature: Background Audit Jobs and Progress
 
 ## Status
 
@@ -6,60 +6,78 @@ Complete
 
 ## Branch
 
-`feature/page-selection-scopes`
+`feature/background-audit-jobs`
 
 ## Feature
 
-Feature 25 from `context/feature_list_in_order.md`.
+Feature 26 from `context/feature_list_in_order.md`.
 
 ## Objective
 
-Let practitioners choose an exact, reviewable set of eligible website pages and lock that choice
-into an immutable audit scope that cannot be changed by later rediscovery or client edits.
+Run immutable audit scopes as durable, cancellable background jobs in the Electron utility process
+while keeping the renderer and main event loop responsive and making progress understandable after
+renderer reloads or application recovery.
 
 ## Included Scope
 
-- Add durable include, exclude, clear, visible-page, and recommended-page selection operations.
-- Add accessible row checkboxes and indeterminate select-all behavior.
-- Keep selection stable across search, filters, pagination, and rediscovery.
-- Show selected, eligible, unavailable, and excluded counts with clear ineligibility reasons.
-- Apply deterministic recommendations for representative pages while excluding obvious archives,
-  account, transaction, duplicate-content, and unavailable pages by default.
-- Persist immutable audit scope and scope-page snapshots with target identity, selected page IDs and
-  normalized URLs, relevant configuration, report formats, actor, and creation time.
-- Validate every selected page against the client's current website and allowed target scope.
-- Make retained audit scopes prevent permanent client deletion.
-- Add typed and sender-validated selection and scope IPC methods.
-- Extend the Impeccable Website Pages workspace with efficient selection and scope actions.
-- Preserve Feature 24 discovery behavior and the existing CLI.
+- Persist one idempotent audit job per immutable scope with stable ownership and timestamps.
+- Support queued, discovering, scanning, generating-reports, completed, partially-completed,
+  failed, and cancelled lifecycle states.
+- Persist page progress, attempts, warning counts, failed-page counts, cancellation requests, and
+  classified failures.
+- Recover interrupted work safely after application restart and resume queued work.
+- Run the existing audit orchestrator in the Electron utility process against the scope's exact
+  normalized URLs.
+- Add typed utility-process messages for execution, progress, completion, cancellation, and
+  shutdown.
+- Add external cancellation and high-level progress support to the audit orchestrator without
+  changing existing CLI behavior.
+- Add a main-process audit job manager with serial dispatch, worker-exit recovery, and cleanup.
+- Add sender-validated IPC and narrow preload methods for starting, listing, reading, and
+  cancelling jobs.
+- Add Impeccable client-level and workspace-level audit monitoring views with reconnect-safe
+  polling and accessible lifecycle states.
+- Preserve Feature 25 scope immutability and all existing crawler, scanner, report, and CLI safety.
 
 ## Excluded Scope
 
-- Executing the immutable scope as a background audit job, implemented in Feature 26.
-- Audit history and report artifact management, implemented in Feature 27.
+- Full audit history filtering and report artifact open, reveal, and export workflows, implemented
+  in Feature 27.
+- Release 2A installer acceptance and clean-machine validation, implemented in Feature 28.
 
 ## Acceptance Criteria
 
-- Selection changes are database-backed and remain stable across filters and pagination.
-- Include operations refuse unavailable, no-longer-observed, or out-of-scope pages.
-- Select recommended chooses only current, eligible, representative pages and records reasons.
-- Bulk selection requests are bounded, validated, and scoped to one client website.
-- Creating a scope snapshots exact selected page IDs and normalized URLs plus validated settings.
-- Rediscovery and client edits cannot modify an existing scope snapshot.
-- Historical scopes remain readable and block destructive client deletion.
-- The selection UI is keyboard accessible and visually verified at compact and standard windows.
-- Strict persistence, contract, renderer, and scope-immutability tests cover the workflow.
-- All project quality gates pass.
+- Starting the same immutable scope repeatedly returns one job and never duplicates execution.
+- Audit work executes outside the renderer and Electron main event loop.
+- The utility process receives only validated scope data, configuration, and application-owned
+  output locations.
+- Only the exact scope URLs are crawled and scanned.
+- Job lifecycle transitions are validated and persisted with actionable failure classifications.
+- Renderer reload or window recreation can reconstruct current progress from SQLite.
+- Interrupted active jobs recover safely to queued work after application restart.
+- Cancellation aborts active audit work and closes browser, Lighthouse, and temporary resources.
+- Recoverable page or scanner failures produce a partially-completed job instead of hiding
+  successful work.
+- Client and workspace monitoring UIs cover loading, empty, running, partial, failed, completed,
+  cancellation, and worker-unavailable states.
+- Strict persistence, protocol, IPC, renderer, cancellation, recovery, and exact-scope tests cover
+  the workflow.
+- All project quality, packaging, smoke, Impeccable, and visual gates pass.
 
 ## History
 
-- 2026-07-23: Feature started after Feature 24 passed 238 tests and desktop visual QA.
-- 2026-07-23: Added durable include, exclude, reset, visible, and recommended selection actions,
-  indeterminate checkbox behavior, immutable scope snapshots, URL-scope validation, and
-  retention-aware deletion.
-- 2026-07-23: Feature completed after 244 tests across 50 files, formatting, linting, strict CLI and
-  desktop type checking, Prisma validation, the CLI build, Windows Electron packaging, compiled
-  scope-lock smoke, full-page standard and compact visual review, clean Impeccable scans, and the
-  production dependency audit all passed.
-- 2026-07-23: Added and regression-tested a generated development entry bridge so Electron 43 can
-  resolve Forge's required `.webpack/main` package entry and open the real renderer workspace.
+- 2026-07-24: Feature started after Feature 25 and the Electron development-entry regression fix
+  passed 245 tests, packaging, packaged smoke, and renderer-level launch verification.
+- 2026-07-24: Added durable idempotent audit jobs, validated lifecycle transitions, exact immutable
+  scope execution, persisted progress and warnings, safe retries and cancellation, restart
+  recovery, utility-process orchestration, and bounded shutdown cleanup.
+- 2026-07-24: Added sender-validated audit IPC, a narrow preload API, deliberate audit start from
+  the locked scope, and Impeccable workspace and client audit monitors with compact-window
+  behavior, useful failures, warnings, progress, cancellation, and retry actions.
+- 2026-07-24: Corrected Electron Forge production packaging for pnpm, Playwright, Lighthouse, and
+  Prisma by using the required hoisted dependency layout, runtime externals, dynamic Lighthouse
+  loading, pruned module packaging, and a deterministic isolated packaged-ASAR smoke harness.
+- 2026-07-24: Feature completed after the full test suite, formatting, linting, strict CLI and
+  desktop type checking, Prisma schema validation, production build, Windows Electron packaging,
+  packaged-ASAR database and utility-worker smoke, clean Impeccable detection, and standard and
+  compact visual review passed.

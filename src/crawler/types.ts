@@ -44,6 +44,13 @@ export interface CrawlDependencies {
 
 export interface CrawlWebsiteOptions {
   readonly config: AuditConfig;
+  readonly followLinks?: boolean;
   readonly onPageFetched?: (resource: CrawlPageResource) => void;
+  readonly onPageProcessed?: (
+    page: ScannedPage,
+    completedPages: number,
+    totalPages: number,
+  ) => void;
+  readonly seedUrls?: readonly string[];
   readonly signal?: AbortSignal;
 }

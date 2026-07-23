@@ -36,6 +36,8 @@ module.exports = {
   },
   externals: {
     "@prisma/client": "commonjs2 @prisma/client",
+    lighthouse: "import lighthouse",
+    playwright: "commonjs2 playwright",
   },
   module: {
     rules: [
@@ -53,6 +55,9 @@ module.exports = {
     ],
   },
   output: {
+    environment: {
+      dynamicImport: true,
+    },
     filename: "[name].cjs",
   },
   plugins: [new MainProcessManifestPlugin()],

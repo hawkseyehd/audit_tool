@@ -1,10 +1,28 @@
+import { existsSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 import { _electron as electron } from "playwright";
 
-const executablePath = path.resolve("node_modules", "electron", "dist", "electron.exe");
+const packagedExecutablePath = path.resolve(
+  "out",
+  "Website Audit Tool-win32-x64",
+  "website-audit-tool.exe",
+);
+const packagedAsarPath = path.resolve(
+  "out",
+  "Website Audit Tool-win32-x64",
+  "resources",
+  "app.asar",
+);
+const developmentExecutablePath = path.resolve("node_modules", "electron", "dist", "electron.exe");
 const mainEntry = path.resolve(".webpack", "x64", "main", "index.cjs");
+const smokeTarget = process.env.AUDIT_TOOL_SMOKE_TARGET ?? "asar";
+const usesPackagedApplication = smokeTarget !== "development" && existsSync(packagedExecutablePath);
+const usesPackagedAsar = usesPackagedApplication && smokeTarget === "asar";
+const smokeProfileDirectory = await mkdtemp(path.join(tmpdir(), "audit-tool-package-smoke-"));
 const screenshotPath = path.resolve("tmp", "desktop-overview.png");
 const compactScreenshotPath = path.resolve("tmp", "desktop-overview-compact.png");
 const clientScreenshotPath = path.resolve("tmp", "desktop-clients.png");
@@ -14,8 +32,20 @@ const compactPageInventoryScreenshotPath = path.resolve(
   "tmp",
   "desktop-page-inventory-compact.png",
 );
+const auditsScreenshotPath = path.resolve("tmp", "desktop-audits.png");
+const compactAuditsScreenshotPath = path.resolve("tmp", "desktop-audits-compact.png");
 
-const application = await electron.launch({ args: [mainEntry], executablePath });
+const application = await electron.launch({
+  args: [
+    ...(usesPackagedAsar ? [packagedAsarPath] : usesPackagedApplication ? [] : [mainEntry]),
+    `--user-data-dir=${smokeProfileDirectory}`,
+  ],
+  executablePath: usesPackagedAsar
+    ? developmentExecutablePath
+    : usesPackagedApplication
+      ? packagedExecutablePath
+      : developmentExecutablePath,
+});
 
 try {
   const page = await application.firstWindow();
@@ -173,9 +203,61 @@ try {
   await page.waitForTimeout(250);
   await page.screenshot({ fullPage: true, path: compactPageInventoryScreenshotPath });
 
+  const jobDatabase = new PrismaClient();
+  await jobDatabase.$connect();
+  try {
+    const scope = await jobDatabase.auditScope.findFirstOrThrow({
+      orderBy: { createdAt: "desc" },
+      where: { normalizedDomain: "visual-test.local" },
+    });
+    await jobDatabase.auditJob.upsert({
+      create: {
+        clientBusinessName: scope.clientBusinessName,
+        clientId: scope.clientId,
+        failedPageCount: 1,
+        pagesCompleted: 1,
+        pagesTotal: scope.selectedPageCount,
+        scopeId: scope.id,
+        completedAt: new Date(),
+        startedAt: new Date(),
+        state: "partially-completed",
+        targetUrl: scope.targetUrl,
+        warningCount: 1,
+        warningsJson: JSON.stringify(["One scoped page could not be fetched."]),
+        websiteId: scope.websiteId,
+      },
+      update: {
+        failedPageCount: 1,
+        pagesCompleted: 1,
+        completedAt: new Date(),
+        startedAt: new Date(),
+        state: "partially-completed",
+        warningCount: 1,
+        warningsJson: JSON.stringify(["One scoped page could not be fetched."]),
+      },
+      where: { scopeId: scope.id },
+    });
+  } finally {
+    await jobDatabase.$disconnect();
+  }
+
+  await page.getByRole("button", { name: "Audits" }).click();
+  await page.getByText("Partially completed").first().waitFor();
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: auditsScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: compactAuditsScreenshotPath });
+
   process.stdout.write(
-    `${JSON.stringify({ bootstrap, clientScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, screenshotPath })}\n`,
+    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
   );
 } finally {
   await application.close();
+  await rm(smokeProfileDirectory, { force: true, recursive: true });
 }

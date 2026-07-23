@@ -1,3 +1,4 @@
+const fs = require("node:fs/promises");
 const path = require("node:path");
 
 class MainProcessManifestPlugin {
@@ -15,6 +16,15 @@ class MainProcessManifestPlugin {
           );
         },
       );
+    });
+    compiler.hooks.afterEmit.tapPromise("MainProcessManifestPlugin", async (compilation) => {
+      const outputPath = compilation.outputOptions.path;
+      if (outputPath === undefined) {
+        throw new Error("Webpack main-process output path is unavailable");
+      }
+
+      const entryPath = path.resolve(outputPath, "..", "main.js");
+      await fs.writeFile(entryPath, 'import "./main/index.cjs";\n', "utf8");
     });
   }
 }

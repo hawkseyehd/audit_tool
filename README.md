@@ -24,6 +24,10 @@ public business websites and turns technical evidence into prioritized, client-r
   recommendations, rediscovery changes, search, filters, and bounded pagination.
 - Durable page inclusion and exclusion with recommended defaults and immutable audit scope
   snapshots that survive later client and inventory changes.
+- Background audit jobs with durable progress, cancellation, retry, partial-result handling, and
+  canonical client audit history.
+- Secure report library actions for opening, revealing, and exporting generated artifacts by
+  trusted identifiers.
 
 ## Requirements
 
@@ -71,7 +75,13 @@ pnpm desktop:package
 pnpm desktop:make
 ```
 
-Generated desktop artifacts are written below `out/` and are not committed.
+Both commands prepare a project-managed Chromium runtime before packaging, so the installed audit
+tool does not depend on a separately installed browser. The Squirrel installer is written to
+`out/make/squirrel.windows/x64/WebsiteAuditToolSetup.exe`; generated artifacts are not committed.
+
+Release signing is environment-driven. Set `WINDOWS_CERTIFICATE_FILE` and
+`WINDOWS_CERTIFICATE_PASSWORD` in the release shell before `pnpm desktop:make`; certificate files
+and passwords must never be added to source control.
 
 ## Run An Audit
 
@@ -146,6 +156,8 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm desktop:package
+pnpm desktop:inspect
+pnpm desktop:runtime-smoke
 pnpm desktop:smoke
 pnpm --registry=https://registry.npmjs.org/ audit --prod
 ```

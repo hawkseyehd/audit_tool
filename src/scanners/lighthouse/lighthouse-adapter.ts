@@ -1,4 +1,5 @@
 import { launch } from "chrome-launcher";
+import { chromium } from "playwright";
 import { prioritizePagesForScanning } from "../../classifiers/page-scan-priority.js";
 import { assertPublicNetworkTarget } from "../../url/network-safety.js";
 import { lighthousePageResultSchema } from "./schemas.js";
@@ -68,6 +69,7 @@ export async function runLighthouseAudits(
 const defaultChromeLauncher: LighthouseChromeLauncher = async () => {
   const chrome = await launch({
     chromeFlags: ["--headless=new", "--no-first-run", "--disable-gpu"],
+    chromePath: chromium.executablePath(),
   });
   return {
     port: chrome.port,

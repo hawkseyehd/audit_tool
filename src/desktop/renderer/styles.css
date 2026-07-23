@@ -998,13 +998,14 @@ button:focus-visible {
   gap: var(--space-md);
   margin: var(--space-lg) var(--space-xl);
   padding: var(--space-md) var(--space-lg);
-  border-left: 0.1875rem solid var(--primary);
+  border: 0.0625rem solid color-mix(in srgb, var(--primary) 35%, var(--rule));
+  border-radius: var(--radius-sm);
   background: var(--primary-tint);
 }
 
 .discovery-notice-partial,
 .discovery-notice-failed {
-  border-left-color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--rule));
   background: var(--warning-tint);
 }
 
@@ -1038,7 +1039,8 @@ button:focus-visible {
   gap: var(--space-md);
   margin: var(--space-lg) var(--space-xl);
   padding: var(--space-md) var(--space-lg);
-  border-left: 0.1875rem solid var(--success);
+  border: 0.0625rem solid color-mix(in srgb, var(--success) 35%, var(--rule));
+  border-radius: var(--radius-sm);
   background: var(--success-tint);
   color: var(--success-ink);
 }
@@ -1338,7 +1340,8 @@ button:focus-visible {
 
 .success-notice {
   padding: var(--space-md);
-  border-left: 0.1875rem solid var(--success);
+  border: 0.0625rem solid color-mix(in srgb, var(--success) 35%, var(--rule));
+  border-radius: var(--radius-sm);
   background: var(--success-tint);
   color: var(--success-ink);
 }

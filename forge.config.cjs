@@ -6,6 +6,11 @@ const { AutoUnpackNativesPlugin } = require("@electron-forge/plugin-auto-unpack-
 const { WebpackPlugin } = require("@electron-forge/plugin-webpack");
 const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 
+const certificateFile = process.env.WINDOWS_CERTIFICATE_FILE;
+const certificatePassword = process.env.WINDOWS_CERTIFICATE_PASSWORD;
+const squirrelSigning =
+  certificateFile && certificatePassword ? { certificateFile, certificatePassword } : {};
+
 module.exports = {
   hooks: {
     packageAfterPrune: async (_forgeConfig, buildPath) => {
@@ -18,6 +23,7 @@ module.exports = {
   packagerConfig: {
     asar: true,
     executableName: "website-audit-tool",
+    extraResource: [path.resolve(__dirname, ".playwright-browsers")],
     ignore: (file) => {
       if (!file) return false;
       if (/^[/\\]node_modules[/\\]\.pnpm(?:$|[/\\])/.test(file)) return true;
@@ -33,6 +39,7 @@ module.exports = {
       config: {
         name: "website_audit_tool",
         setupExe: "WebsiteAuditToolSetup.exe",
+        ...squirrelSigning,
       },
     },
   ],

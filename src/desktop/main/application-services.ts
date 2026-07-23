@@ -5,6 +5,7 @@ import { desktopBootstrapSchema, type DesktopBootstrap } from "../shared/contrac
 import { AuditJobManager } from "./audit-job-manager.js";
 import { DesktopDatabaseService } from "./database-service.js";
 import { ReportArtifactService } from "./report-artifact-service.js";
+import { configurePackagedBrowserEnvironment } from "./runtime-paths.js";
 import { WorkerCoordinator } from "./worker-coordinator.js";
 
 export class ApplicationServices {
@@ -17,6 +18,7 @@ export class ApplicationServices {
   #reports: ReportArtifactService | undefined;
 
   constructor(options: { dataDirectory: string; logger: Logger }) {
+    configurePackagedBrowserEnvironment(app.isPackaged);
     this.#dataDirectory = options.dataDirectory;
     this.#database = new DesktopDatabaseService(options.dataDirectory);
     this.#logger = options.logger;

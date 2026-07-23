@@ -1,11 +1,14 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 import { _electron as electron } from "playwright";
 
+const require = createRequire(import.meta.url);
+const axe = require("axe-core") as { source: string };
 const packagedExecutablePath = path.resolve(
   "out",
   "Website Audit Tool-win32-x64",
@@ -48,12 +51,36 @@ const application = await electron.launch({
       ? packagedExecutablePath
       : developmentExecutablePath,
 });
+await application.context().addInitScript({ content: axe.source });
 
 try {
   const page = await application.firstWindow();
+  await page.reload();
   await page.getByRole("heading", { name: "Workspace" }).waitFor({ timeout: 15_000 });
   await page.getByText("Database ready").waitFor({ timeout: 15_000 });
   await page.getByText("Audit worker").waitFor({ timeout: 15_000 });
+  await page.keyboard.press("Tab");
+  const initialFocus = await page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return null;
+    const bounds = active.getBoundingClientRect();
+    return {
+      height: bounds.height,
+      tagName: active.tagName,
+      width: bounds.width,
+    };
+  });
+  if (
+    initialFocus === null ||
+    !["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"].includes(initialFocus.tagName) ||
+    initialFocus.height <= 0 ||
+    initialFocus.width <= 0
+  ) {
+    throw new Error(
+      `Keyboard focus did not reach a visible control: ${JSON.stringify(initialFocus)}`,
+    );
+  }
+  await assertNoSeriousAccessibilityViolations(page, "workspace overview");
 
   await application.evaluate(({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0];
@@ -67,6 +94,20 @@ try {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: compactScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.webContents.setZoomFactor(1.25);
+  });
+  await page.waitForTimeout(250);
+  const zoomedLayout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  if (zoomedLayout.scrollWidth > zoomedLayout.clientWidth + 1) {
+    throw new Error(`Display scaling caused page overflow: ${JSON.stringify(zoomedLayout)}`);
+  }
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.webContents.setZoomFactor(1);
+  });
 
   const bootstrap = await page.evaluate(() => window.auditTool.getBootstrap());
   if (bootstrap.services.database !== "ready" || bootstrap.services.worker !== "ready") {
@@ -182,6 +223,7 @@ try {
   });
   await page.getByRole("button", { name: "Clients" }).click();
   await page.getByText("Northstar Dental Studio").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "client list");
   await page.screenshot({ path: clientScreenshotPath });
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
@@ -194,6 +236,7 @@ try {
   await page.getByText("Dental Services").waitFor();
   await page.getByRole("button", { name: "Lock audit scope" }).click();
   await page.getByText("Audit scope locked").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "page inventory");
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
   });
@@ -309,6 +352,7 @@ try {
 
   await page.getByRole("button", { name: "Audits" }).click();
   await page.locator(".audit-job-status-partially-completed").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "audit history");
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
   });
@@ -322,6 +366,7 @@ try {
 
   await page.getByRole("button", { name: "Reports" }).click();
   await page.getByText("client-summary.pdf").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "report library");
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
   });
@@ -339,4 +384,45 @@ try {
 } finally {
   await application.close();
   await rm(smokeProfileDirectory, { force: true, recursive: true });
+}
+
+async function assertNoSeriousAccessibilityViolations(
+  page: Awaited<ReturnType<typeof application.firstWindow>>,
+  surface: string,
+): Promise<void> {
+  await page.waitForTimeout(250);
+  const result = await page.evaluate(async () => {
+    const axeApi = (
+      window as unknown as {
+        axe: {
+          run: () => Promise<{
+            violations: {
+              id: string;
+              impact: "critical" | "minor" | "moderate" | "serious" | null;
+              nodes: {
+                failureSummary?: string;
+                html: string;
+                target: string[];
+              }[];
+            }[];
+          }>;
+        };
+      }
+    ).axe;
+    return axeApi.run();
+  });
+  const blocking = result.violations.filter(
+    (violation) => violation.impact === "critical" || violation.impact === "serious",
+  );
+  if (blocking.length === 0) return;
+  throw new Error(
+    `${surface} has serious accessibility violations: ${blocking
+      .map(
+        (violation) =>
+          `${violation.id} ${violation.nodes
+            .map((node) => `${node.target.join(" ")}: ${node.failureSummary ?? node.html}`)
+            .join("; ")}`,
+      )
+      .join(", ")}`,
+  );
 }

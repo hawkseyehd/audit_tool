@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       ".agents/**",
       ".impeccable/**",
+      ".playwright-browsers/**",
       ".webpack/**",
       "coverage/**",
       "dist/**",
@@ -38,6 +39,11 @@ export default tseslint.config(
   {
     files: ["**/*.{js,cjs,mjs}"],
     ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
   },
   {
     files: ["**/*.cjs"],

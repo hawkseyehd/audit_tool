@@ -173,6 +173,33 @@ Windows x64 Electron packaging, and the compiled Electron smoke test all passed.
 worker services reported ready, and the pnpm production dependency audit reported no known
 vulnerabilities.
 
+## Page Selection and Scope Validation
+
+Feature 25 adds focused selection, scope, contract, renderer, and retention coverage. Tests verify
+individual include and reset actions, explicit exclusion, visible-page and recommended selection,
+bounded unique page IDs, preservation of manual exclusions, refusal of foreign and unavailable
+pages, selected and eligible counts, and no-submit scope configuration validation.
+
+Scope tests copy exact page IDs, normalized URLs, page types, client and website identity, target,
+configuration, report formats, actor, and timestamp. They then delete the mutable page inventory
+and rename the current client and website. The stored scope remains byte-for-byte readable and
+retained scope history prevents permanent client deletion. Additional tests reject stale,
+unavailable, and out-of-domain selections before a snapshot is written.
+
+The compiled Electron application loaded a representative inventory, exposed an indeterminate
+visible-page checkbox, retained one selected page, and created a real immutable scope through the
+preload, IPC, repository, and SQLite layers. Full-page captures at 1280 x 820 and 900 x 700 were
+inspected at full resolution. Counts, checkbox states, disabled unavailable pages, bulk commands,
+scope confirmation, responsive wrapping, row hierarchy, horizontal table access, and keyboard
+focus targets were clear with no overlap or clipping. The Impeccable layout and type detectors
+returned no findings.
+
+The complete Feature 25 regression gate passed 244 tests across 50 files. Formatting, zero-warning
+linting, strict CLI and desktop type checking, Prisma schema validation, the CLI production build,
+Windows x64 Electron packaging, compiled scope-lock smoke, and the production dependency audit all
+passed. The database and worker services reported ready, and no known production vulnerabilities
+were found.
+
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,
 category and severity navigation, a 30-day action plan, and explicit audit limitations.

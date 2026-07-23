@@ -22,6 +22,8 @@ public business websites and turns technical evidence into prioritized, client-r
   activity history, and focused client workspaces for pages, audits, and reports.
 - Safe lightweight website discovery with durable page inventories, classifications, availability,
   recommendations, rediscovery changes, search, filters, and bounded pagination.
+- Durable page inclusion and exclusion with recommended defaults and immutable audit scope
+  snapshots that survive later client and inventory changes.
 
 ## Requirements
 
@@ -57,6 +59,10 @@ existing client instead of creating duplicates.
 The Website Pages tab reuses the bounded same-domain crawler without running scanners or browser
 interactions. Each discovery preserves stable page records, reports new and changed pages, marks
 unavailable or no-longer-observed pages, and keeps future audit-selection state intact.
+
+Eligible inventory rows can be selected individually, by visible page, or by recommendation.
+Locking an audit scope copies the exact page IDs and URLs together with audit settings and report
+formats; later rediscovery cannot change that historical scope.
 
 Build an unpacked Windows application or a Squirrel installer with:
 

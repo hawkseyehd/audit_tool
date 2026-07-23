@@ -3,10 +3,13 @@ import { z } from "zod";
 import { PAGE_TYPES, pageTypeSchema } from "../../core/schemas.js";
 
 export const IPC_CHANNELS = {
+  applyPageSelection: "desktop:pages:select",
   createClient: "desktop:clients:create",
+  createAuditScope: "desktop:scopes:create",
   deleteClient: "desktop:clients:delete",
   discoverWebsitePages: "desktop:pages:discover",
   getBootstrap: "desktop:get-bootstrap",
+  getAuditScope: "desktop:scopes:get",
   getClient: "desktop:clients:get",
   listClients: "desktop:clients:list",
   listWebsitePages: "desktop:pages:list",
@@ -219,6 +222,8 @@ export const websitePageListQuerySchema = z
 export const websitePageSummarySchema = z
   .object({
     available: z.number().int().nonnegative(),
+    eligible: z.number().int().nonnegative(),
+    excluded: z.number().int().nonnegative(),
     notObserved: z.number().int().nonnegative(),
     selected: z.number().int().nonnegative(),
     unavailable: z.number().int().nonnegative(),
@@ -258,6 +263,153 @@ export const discoveryResultSchema = z.discriminatedUnion("ok", [
     })
     .strict(),
 ]);
+
+export const PAGE_SELECTION_ACTIONS = [
+  "include",
+  "exclude",
+  "reset",
+  "clear",
+  "include-recommended",
+] as const;
+export const pageSelectionActionSchema = z.enum(PAGE_SELECTION_ACTIONS);
+export const applyPageSelectionRequestSchema = z
+  .object({
+    action: pageSelectionActionSchema,
+    clientId: clientIdSchema,
+    pageIds: z.array(z.uuid()).max(100).default([]),
+  })
+  .strict()
+  .superRefine((request, context) => {
+    if (new Set(request.pageIds).size !== request.pageIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Page IDs must be unique",
+        path: ["pageIds"],
+      });
+    }
+    const usesPageIds =
+      request.action === "include" || request.action === "exclude" || request.action === "reset";
+    if (usesPageIds && request.pageIds.length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "At least one page is required for this selection action",
+        path: ["pageIds"],
+      });
+    }
+    if (!usesPageIds && request.pageIds.length > 0) {
+      context.addIssue({
+        code: "custom",
+        message: "This selection action does not accept page IDs",
+        path: ["pageIds"],
+      });
+    }
+  });
+
+export const pageSelectionResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), summary: websitePageSummarySchema }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum(["not-found", "invalid-pages", "ineligible-pages"]),
+          message: z.string().trim().min(1).max(1_000),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
+export const AUDIT_SCOPE_REPORT_FORMATS = [
+  "client-summary-pdf",
+  "summary-pdf",
+  "pdf",
+  "html",
+  "json",
+  "markdown",
+] as const;
+export const auditScopeReportFormatSchema = z.enum(AUDIT_SCOPE_REPORT_FORMATS);
+export const auditScopeConfigurationSchema = z
+  .object({
+    includeAccessibility: z.boolean(),
+    includeAnalytics: z.boolean(),
+    includeForms: z.boolean(),
+    includeLighthouse: z.boolean(),
+    includeSecurity: z.boolean(),
+    includeSeo: z.boolean(),
+    includeUxHeuristics: z.boolean(),
+    submitForms: z.literal(false),
+    viewports: z
+      .array(z.enum(["desktop", "mobile"]))
+      .min(1)
+      .max(2)
+      .refine((items) => new Set(items).size === items.length, "Viewports must be unique"),
+  })
+  .strict();
+
+export const auditScopePageSchema = z
+  .object({
+    normalizedUrl: z.url(),
+    pageId: z.uuid(),
+    pageType: pageTypeSchema,
+  })
+  .strict();
+export const auditScopeRecordSchema = z
+  .object({
+    clientBusinessName: z.string().trim().min(1).max(200),
+    clientId: clientIdSchema,
+    configuration: auditScopeConfigurationSchema,
+    createdAt: z.iso.datetime(),
+    id: z.uuid(),
+    normalizedDomain: z.string().trim().min(1).max(253),
+    pages: z.array(auditScopePageSchema).min(1).max(100),
+    reportFormats: z
+      .array(auditScopeReportFormatSchema)
+      .min(1)
+      .max(AUDIT_SCOPE_REPORT_FORMATS.length),
+    requestedBy: z.string().trim().min(1).max(120),
+    selectedPageCount: z.number().int().positive().max(100),
+    targetUrl: z.url(),
+    websiteId: z.uuid(),
+  })
+  .strict()
+  .refine((scope) => scope.selectedPageCount === scope.pages.length, {
+    message: "Selected page count must match scope pages",
+    path: ["selectedPageCount"],
+  });
+
+export const createAuditScopeRequestSchema = z
+  .object({
+    clientId: clientIdSchema,
+    configuration: auditScopeConfigurationSchema,
+    reportFormats: z
+      .array(auditScopeReportFormatSchema)
+      .min(1)
+      .max(AUDIT_SCOPE_REPORT_FORMATS.length)
+      .refine((items) => new Set(items).size === items.length, "Report formats must be unique"),
+  })
+  .strict();
+export const createAuditScopeResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), scope: auditScopeRecordSchema }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum([
+            "not-found",
+            "no-selection",
+            "too-many-pages",
+            "ineligible-selection",
+            "out-of-scope",
+          ]),
+          message: z.string().trim().min(1).max(1_000),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+export const getAuditScopeRequestSchema = z.object({ id: z.uuid() }).strict();
 
 export const serviceStateSchema = z.enum(["ready", "unavailable"]);
 
@@ -300,6 +452,12 @@ export type ClientStatus = z.infer<typeof clientStatusSchema>;
 export type DeleteClientResult = z.infer<typeof deleteClientResultSchema>;
 export type DiscoveryResult = z.infer<typeof discoveryResultSchema>;
 export type DiscoveryRun = z.infer<typeof discoveryRunSchema>;
+export type AuditScopeConfiguration = z.infer<typeof auditScopeConfigurationSchema>;
+export type AuditScopeRecord = z.infer<typeof auditScopeRecordSchema>;
+export type CreateAuditScopeResult = z.infer<typeof createAuditScopeResultSchema>;
+export type AuditScopeReportFormat = z.infer<typeof auditScopeReportFormatSchema>;
+export type PageSelectionAction = z.infer<typeof pageSelectionActionSchema>;
+export type PageSelectionResult = z.infer<typeof pageSelectionResultSchema>;
 export type WebsitePageListQuery = z.infer<typeof websitePageListQuerySchema>;
 export type WebsitePageListResult = z.infer<typeof websitePageListResultSchema>;
 export type WebsitePageRecord = z.infer<typeof websitePageRecordSchema>;
@@ -307,12 +465,21 @@ export type WebsitePageRecord = z.infer<typeof websitePageRecordSchema>;
 export { PAGE_TYPES };
 
 export interface DesktopApi {
+  applyPageSelection(
+    request: z.infer<typeof applyPageSelectionRequestSchema>,
+  ): Promise<PageSelectionResult>;
   createClient(input: ClientInput): Promise<ClientMutationResult>;
+  createAuditScope(
+    request: z.infer<typeof createAuditScopeRequestSchema>,
+  ): Promise<CreateAuditScopeResult>;
   deleteClient(request: z.infer<typeof deleteClientRequestSchema>): Promise<DeleteClientResult>;
   discoverWebsitePages(
     request: z.infer<typeof discoverWebsitePagesRequestSchema>,
   ): Promise<DiscoveryResult>;
   getBootstrap(): Promise<DesktopBootstrap>;
+  getAuditScope(
+    request: z.infer<typeof getAuditScopeRequestSchema>,
+  ): Promise<AuditScopeRecord | null>;
   getClient(request: z.infer<typeof getClientRequestSchema>): Promise<ClientRecord | null>;
   listClients(query: ClientListQuery): Promise<ClientListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;

@@ -199,6 +199,8 @@ describe("page discovery", () => {
     });
     expect(secondList.summary).toEqual({
       available: 2,
+      eligible: 2,
+      excluded: 0,
       notObserved: 1,
       selected: 1,
       unavailable: 0,

@@ -5,13 +5,18 @@ import {
   Compass,
   Filter,
   Globe,
+  LockKeyhole,
   RefreshCw,
   Search,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  AUDIT_SCOPE_REPORT_FORMATS,
   PAGE_TYPES,
+  type AuditScopeConfiguration,
+  type AuditScopeRecord,
+  type PageSelectionAction,
   type WebsitePageListQuery,
   type WebsitePageListResult,
   type WebsitePageRecord,
@@ -21,6 +26,18 @@ type InventoryState =
   | { type: "loading" }
   | { message: string; type: "error" }
   | { result: WebsitePageListResult; type: "ready" };
+
+const defaultScopeConfiguration: AuditScopeConfiguration = {
+  includeAccessibility: true,
+  includeAnalytics: true,
+  includeForms: true,
+  includeLighthouse: true,
+  includeSecurity: true,
+  includeSeo: true,
+  includeUxHeuristics: true,
+  submitForms: false,
+  viewports: ["desktop", "mobile"],
+};
 
 function createDefaultQuery(clientId: string): WebsitePageListQuery {
   return {
@@ -65,6 +82,14 @@ function InventorySummary(props: { result: WebsitePageListResult }): React.JSX.E
       <div>
         <dt>Available</dt>
         <dd>{props.result.summary.available.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>Eligible</dt>
+        <dd>{props.result.summary.eligible.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>Selected</dt>
+        <dd>{props.result.summary.selected.toLocaleString()}</dd>
       </div>
       <div>
         <dt>Unavailable</dt>
@@ -117,6 +142,9 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
   const [state, setState] = useState<InventoryState>({ type: "loading" });
   const [discovering, setDiscovering] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string>();
+  const [selectionWorking, setSelectionWorking] = useState(false);
+  const [scope, setScope] = useState<AuditScopeRecord>();
+  const selectVisibleRef = useRef<HTMLInputElement>(null);
 
   const loadPages = useCallback(async () => {
     setState({ type: "loading" });
@@ -160,6 +188,49 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
     }
   };
 
+  const applySelection = async (
+    action: PageSelectionAction,
+    pageIds: readonly string[] = [],
+  ): Promise<void> => {
+    setSelectionWorking(true);
+    setDiscoveryError(undefined);
+    try {
+      const result = await window.auditTool.applyPageSelection({
+        action,
+        clientId: props.clientId,
+        pageIds: [...pageIds],
+      });
+      if (!result.ok) setDiscoveryError(result.error.message);
+      await loadPages();
+    } catch (error) {
+      setDiscoveryError(
+        error instanceof Error ? error.message : "Page selection could not be updated",
+      );
+    } finally {
+      setSelectionWorking(false);
+    }
+  };
+
+  const createScope = async (): Promise<void> => {
+    setSelectionWorking(true);
+    setDiscoveryError(undefined);
+    try {
+      const result = await window.auditTool.createAuditScope({
+        clientId: props.clientId,
+        configuration: defaultScopeConfiguration,
+        reportFormats: [...AUDIT_SCOPE_REPORT_FORMATS],
+      });
+      if (result.ok) setScope(result.scope);
+      else setDiscoveryError(result.error.message);
+    } catch (error) {
+      setDiscoveryError(
+        error instanceof Error ? error.message : "Audit scope could not be created",
+      );
+    } finally {
+      setSelectionWorking(false);
+    }
+  };
+
   const setFilter = <Key extends keyof WebsitePageListQuery>(
     key: Key,
     value: WebsitePageListQuery[Key],
@@ -174,6 +245,21 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
     query.changeState === "all" &&
     query.status === "all" &&
     query.selectionState === "all";
+  const readyItems = state.type === "ready" ? state.result.items : [];
+  const visibleEligibleIds = readyItems
+    .filter((page) => page.availability === "available")
+    .map((page) => page.id);
+  const visibleSelectedCount = readyItems.filter(
+    (page) => page.availability === "available" && page.selectionState === "included",
+  ).length;
+  const allVisibleSelected =
+    visibleEligibleIds.length > 0 && visibleSelectedCount === visibleEligibleIds.length;
+
+  useEffect(() => {
+    if (selectVisibleRef.current !== null) {
+      selectVisibleRef.current.indeterminate = visibleSelectedCount > 0 && !allVisibleSelected;
+    }
+  }, [allVisibleSelected, visibleSelectedCount]);
 
   return (
     <div className="page-inventory">
@@ -216,6 +302,18 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
         <>
           <InventorySummary result={state.result} />
           <RunNotice result={state.result} />
+          {scope !== undefined && (
+            <div className="scope-notice" role="status">
+              <LockKeyhole aria-hidden="true" size={17} />
+              <div>
+                <strong>Audit scope locked</strong>
+                <span>
+                  {scope.selectedPageCount.toLocaleString()}{" "}
+                  {scope.selectedPageCount === 1 ? "page" : "pages"} · {scope.id.slice(0, 8)}
+                </span>
+              </div>
+            </div>
+          )}
 
           {state.result.latestRun === null && state.result.total === 0 ? (
             <div className="empty-directory page-inventory-empty">
@@ -342,6 +440,61 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
                 </details>
               </div>
 
+              <div className="selection-toolbar" aria-label="Page selection actions">
+                <span>
+                  <strong>{state.result.summary.selected.toLocaleString()}</strong> selected ·{" "}
+                  {state.result.summary.eligible.toLocaleString()} eligible
+                </span>
+                <div>
+                  <button
+                    className="button secondary"
+                    disabled={selectionWorking || visibleEligibleIds.length === 0}
+                    onClick={() => void applySelection("include", visibleEligibleIds)}
+                    type="button"
+                  >
+                    Select visible
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={selectionWorking || state.result.summary.eligible === 0}
+                    onClick={() => void applySelection("include-recommended")}
+                    type="button"
+                  >
+                    Select recommended
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={selectionWorking || readyItems.length === 0}
+                    onClick={() =>
+                      void applySelection(
+                        "exclude",
+                        readyItems.map((page) => page.id),
+                      )
+                    }
+                    type="button"
+                  >
+                    Exclude visible
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={selectionWorking || state.result.summary.selected === 0}
+                    onClick={() => void applySelection("clear")}
+                    type="button"
+                  >
+                    Clear selection
+                  </button>
+                  <button
+                    className="button primary"
+                    disabled={selectionWorking || state.result.summary.selected === 0}
+                    onClick={() => void createScope()}
+                    type="button"
+                  >
+                    <LockKeyhole aria-hidden="true" size={16} />
+                    Lock audit scope
+                  </button>
+                </div>
+              </div>
+
               {state.result.items.length === 0 ? (
                 <div className="empty-directory compact-empty">
                   <Search aria-hidden="true" size={24} />
@@ -357,6 +510,21 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
                   <table className="page-table">
                     <thead>
                       <tr>
+                        <th className="selection-column">
+                          <input
+                            aria-label="Select all eligible pages on this page"
+                            checked={allVisibleSelected}
+                            disabled={selectionWorking || visibleEligibleIds.length === 0}
+                            onChange={() =>
+                              void applySelection(
+                                allVisibleSelected ? "reset" : "include",
+                                visibleEligibleIds,
+                              )
+                            }
+                            ref={selectVisibleRef}
+                            type="checkbox"
+                          />
+                        </th>
                         <th>Page</th>
                         <th>Type</th>
                         <th>Status</th>
@@ -369,6 +537,21 @@ export function WebsitePages(props: { clientId: string; websiteUrl: string }): R
                     <tbody>
                       {state.result.items.map((page) => (
                         <tr key={page.id}>
+                          <td className="selection-column">
+                            <input
+                              aria-label={`${page.selectionState === "included" ? "Remove" : "Include"} ${page.title ?? page.normalizedUrl}`}
+                              checked={page.selectionState === "included"}
+                              disabled={selectionWorking || page.availability !== "available"}
+                              onChange={() =>
+                                void applySelection(
+                                  page.selectionState === "included" ? "reset" : "include",
+                                  [page.id],
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            {page.selectionState === "excluded" && <small>Excluded</small>}
+                          </td>
                           <td>
                             <div className="page-identity">
                               <strong>{page.title ?? "Untitled page"}</strong>

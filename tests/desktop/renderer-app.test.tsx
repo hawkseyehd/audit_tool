@@ -19,10 +19,13 @@ function installApi(api: DesktopApi): void {
 
 function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
   return {
+    applyPageSelection: vi.fn(),
     createClient: vi.fn(),
+    createAuditScope: vi.fn(),
     deleteClient: vi.fn(),
     discoverWebsitePages: vi.fn(),
     getBootstrap: vi.fn().mockResolvedValue(bootstrap),
+    getAuditScope: vi.fn(),
     getClient: vi.fn(),
     listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listWebsitePages: vi.fn().mockResolvedValue({
@@ -30,7 +33,14 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       latestRun: null,
       page: 1,
       pageSize: 25,
-      summary: { available: 0, notObserved: 0, selected: 0, unavailable: 0 },
+      summary: {
+        available: 0,
+        eligible: 0,
+        excluded: 0,
+        notObserved: 0,
+        selected: 0,
+        unavailable: 0,
+      },
       total: 0,
     }),
     setClientStatus: vi.fn(),

@@ -264,6 +264,17 @@ export class ClientRepository {
       });
     }
 
+    const retainedScopeCount = await this.#database.auditScope.count({ where: { clientId: id } });
+    if (retainedScopeCount > 0) {
+      return deleteClientResultSchema.parse({
+        error: {
+          code: "retained-history",
+          message: "This client has retained audit scopes and cannot be permanently deleted.",
+        },
+        ok: false,
+      });
+    }
+
     await this.#database.client.delete({ where: { id } });
     return deleteClientResultSchema.parse({ ok: true });
   }

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -34,6 +34,8 @@ const compactPageInventoryScreenshotPath = path.resolve(
 );
 const auditsScreenshotPath = path.resolve("tmp", "desktop-audits.png");
 const compactAuditsScreenshotPath = path.resolve("tmp", "desktop-audits-compact.png");
+const reportsScreenshotPath = path.resolve("tmp", "desktop-reports.png");
+const compactReportsScreenshotPath = path.resolve("tmp", "desktop-reports-compact.png");
 
 const application = await electron.launch({
   args: [
@@ -210,7 +212,7 @@ try {
       orderBy: { createdAt: "desc" },
       where: { normalizedDomain: "visual-test.local" },
     });
-    await jobDatabase.auditJob.upsert({
+    const job = await jobDatabase.auditJob.upsert({
       create: {
         clientBusinessName: scope.clientBusinessName,
         clientId: scope.clientId,
@@ -237,12 +239,76 @@ try {
       },
       where: { scopeId: scope.id },
     });
+    const completedAt = new Date();
+    const result = await jobDatabase.auditResultRecord.upsert({
+      create: {
+        auditId: "smoke-audit",
+        canonicalResultJson: "{}",
+        categoryScoresJson: JSON.stringify({
+          accessibility: 78,
+          formsAndConversionUx: 82,
+          performance: 74,
+          securityPrivacy: 88,
+          seo: 80,
+          technicalContentQuality: 84,
+        }),
+        clientId: job.clientId,
+        completedAt,
+        findingCountsJson: JSON.stringify({
+          critical: 0,
+          high: 1,
+          info: 0,
+          low: 1,
+          medium: 2,
+        }),
+        jobId: job.id,
+        overallScore: 81.4,
+        resultState: "partially-completed",
+        schemaVersion: "1.0.0",
+        scopeId: scope.id,
+        startedAt: new Date(completedAt.getTime() - 60_000),
+        websiteId: job.websiteId,
+      },
+      update: {
+        categoryScoresJson: JSON.stringify({ performance: 74, seo: 80 }),
+        completedAt,
+        findingCountsJson: JSON.stringify({
+          critical: 0,
+          high: 1,
+          info: 0,
+          low: 1,
+          medium: 2,
+        }),
+        overallScore: 81.4,
+      },
+      where: { jobId: job.id },
+    });
+    await jobDatabase.reportArtifact.upsert({
+      create: {
+        clientId: job.clientId,
+        fileName: "client-summary.pdf",
+        format: "client-summary-pdf",
+        jobId: job.id,
+        resultId: result.id,
+        status: "available",
+        storedPath: path.join("smoke-audit", "client-summary.pdf"),
+        websiteId: job.websiteId,
+      },
+      update: {
+        status: "available",
+        storedPath: path.join("smoke-audit", "client-summary.pdf"),
+      },
+      where: { jobId_format: { format: "client-summary-pdf", jobId: job.id } },
+    });
+    const reportDirectory = path.join(userDataDirectory, "audits", "smoke-audit");
+    await mkdir(reportDirectory, { recursive: true });
+    await writeFile(path.join(reportDirectory, "client-summary.pdf"), "%PDF-1.4\n");
   } finally {
     await jobDatabase.$disconnect();
   }
 
   await page.getByRole("button", { name: "Audits" }).click();
-  await page.getByText("Partially completed").first().waitFor();
+  await page.locator(".audit-job-status-partially-completed").waitFor();
   await application.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
   });
@@ -254,8 +320,21 @@ try {
   await page.waitForTimeout(250);
   await page.screenshot({ fullPage: true, path: compactAuditsScreenshotPath });
 
+  await page.getByRole("button", { name: "Reports" }).click();
+  await page.getByText("client-summary.pdf").waitFor();
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: reportsScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: compactReportsScreenshotPath });
+
   process.stdout.write(
-    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
+    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactReportsScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, reportsScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
   );
 } finally {
   await application.close();

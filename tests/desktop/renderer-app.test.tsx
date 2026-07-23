@@ -25,12 +25,15 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     createAuditScope: vi.fn(),
     deleteClient: vi.fn(),
     discoverWebsitePages: vi.fn(),
+    exportReport: vi.fn(),
     getBootstrap: vi.fn().mockResolvedValue(bootstrap),
     getAuditJob: vi.fn(),
     getAuditScope: vi.fn(),
     getClient: vi.fn(),
+    listAuditHistory: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listAuditJobs: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
+    listReportArtifacts: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listWebsitePages: vi.fn().mockResolvedValue({
       items: [],
       latestRun: null,
@@ -46,6 +49,8 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       },
       total: 0,
     }),
+    openReport: vi.fn(),
+    revealReport: vi.fn(),
     setClientStatus: vi.fn(),
     retryAuditJob: vi.fn(),
     startAuditJob: vi.fn(),
@@ -94,17 +99,23 @@ describe("desktop renderer", () => {
   });
 
   it("opens the durable audit monitor from the main navigation", async () => {
-    const listAuditJobs = vi
-      .fn<DesktopApi["listAuditJobs"]>()
+    const listAuditHistory = vi
+      .fn<DesktopApi["listAuditHistory"]>()
       .mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 });
-    installApi(createApi({ listAuditJobs }));
+    installApi(createApi({ listAuditHistory }));
     render(<App />);
 
     await screen.findByRole("heading", { name: "Workspace" });
     fireEvent.click(screen.getByRole("button", { name: "Audits" }));
 
     expect(screen.getByRole("heading", { name: "Audits" })).toBeTruthy();
-    expect(await screen.findByText("No audits recorded")).toBeTruthy();
-    expect(listAuditJobs).toHaveBeenCalledWith({ page: 1, pageSize: 25, states: [] });
+    expect(await screen.findByText("No matching audits")).toBeTruthy();
+    expect(listAuditHistory).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 25,
+      resultState: "all",
+      search: "",
+      state: "all",
+    });
   });
 });

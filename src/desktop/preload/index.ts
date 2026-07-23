@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 
 import {
   applyPageSelectionRequestSchema,
+  auditHistoryListQuerySchema,
+  auditHistoryListResultSchema,
   auditJobIdRequestSchema,
   auditJobListQuerySchema,
   auditJobListResultSchema,
@@ -24,6 +26,10 @@ import {
   getAuditScopeRequestSchema,
   IPC_CHANNELS,
   pageSelectionResultSchema,
+  reportArtifactActionRequestSchema,
+  reportArtifactActionResultSchema,
+  reportArtifactListQuerySchema,
+  reportArtifactListResultSchema,
   setClientStatusRequestSchema,
   startAuditJobRequestSchema,
   updateClientRequestSchema,
@@ -63,6 +69,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.deleteClient, request),
     );
   },
+  async exportReport(input) {
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.exportReport, request),
+    );
+  },
   async getBootstrap() {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getBootstrap);
     return desktopBootstrapSchema.parse(result);
@@ -94,16 +106,40 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.listClients, request),
     );
   },
+  async listAuditHistory(input) {
+    const request = auditHistoryListQuerySchema.parse(input);
+    return auditHistoryListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listAuditHistory, request),
+    );
+  },
   async listAuditJobs(input) {
     const request = auditJobListQuerySchema.parse(input);
     return auditJobListResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.listAuditJobs, request),
     );
   },
+  async listReportArtifacts(input) {
+    const request = reportArtifactListQuerySchema.parse(input);
+    return reportArtifactListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listReportArtifacts, request),
+    );
+  },
   async listWebsitePages(input) {
     const request = websitePageListQuerySchema.parse(input);
     return websitePageListResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.listWebsitePages, request),
+    );
+  },
+  async openReport(input) {
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.openReport, request),
+    );
+  },
+  async revealReport(input) {
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.revealReport, request),
     );
   },
   async setClientStatus(input) {

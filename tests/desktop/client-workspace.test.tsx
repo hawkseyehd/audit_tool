@@ -44,12 +44,15 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     createAuditScope: vi.fn(),
     deleteClient: vi.fn().mockResolvedValue({ ok: true }),
     discoverWebsitePages: vi.fn(),
+    exportReport: vi.fn(),
     getBootstrap: vi.fn(),
     getAuditJob: vi.fn(),
     getAuditScope: vi.fn(),
     getClient: vi.fn().mockResolvedValue(client),
+    listAuditHistory: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listAuditJobs: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listClients: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
+    listReportArtifacts: vi.fn().mockResolvedValue({ items: [], page: 1, pageSize: 25, total: 0 }),
     listWebsitePages: vi.fn().mockResolvedValue({
       items: [],
       latestRun: null,
@@ -65,6 +68,8 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       },
       total: 0,
     }),
+    openReport: vi.fn(),
+    revealReport: vi.fn(),
     setClientStatus: vi
       .fn()
       .mockResolvedValue({ client: { ...client, status: "archived" }, ok: true }),

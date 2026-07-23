@@ -2,6 +2,8 @@ import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
 
 import {
   applyPageSelectionRequestSchema,
+  auditHistoryListQuerySchema,
+  auditHistoryListResultSchema,
   auditJobIdRequestSchema,
   auditJobListQuerySchema,
   auditJobListResultSchema,
@@ -24,6 +26,10 @@ import {
   IPC_CHANNELS,
   setClientStatusRequestSchema,
   pageSelectionResultSchema,
+  reportArtifactActionRequestSchema,
+  reportArtifactActionResultSchema,
+  reportArtifactListQuerySchema,
+  reportArtifactListResultSchema,
   startAuditJobRequestSchema,
   updateClientRequestSchema,
   websitePageListQuerySchema,
@@ -139,6 +145,35 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     assertTrustedSender(event, window);
     const query = auditJobListQuerySchema.parse(input);
     return auditJobListResultSchema.parse(await services.jobs.list(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.listAuditHistory, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = auditHistoryListQuerySchema.parse(input);
+    return auditHistoryListResultSchema.parse(await services.database.listAuditHistory(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.listReportArtifacts, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = reportArtifactListQuerySchema.parse(input);
+    return reportArtifactListResultSchema.parse(await services.reports.list(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.openReport, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(await services.reports.open(request.artifactId));
+  });
+  ipcMain.handle(IPC_CHANNELS.revealReport, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(
+      await services.reports.reveal(request.artifactId),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.exportReport, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = reportArtifactActionRequestSchema.parse(input);
+    return reportArtifactActionResultSchema.parse(
+      await services.reports.export(request.artifactId, window),
+    );
   });
   ipcMain.handle(IPC_CHANNELS.cancelAuditJob, async (event, input: unknown) => {
     assertTrustedSender(event, window);

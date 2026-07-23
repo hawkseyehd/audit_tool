@@ -15,46 +15,50 @@ model AppMetadata {
 }
 
 model Client {
-  id           String           @id @default(uuid())
-  businessName String
-  searchText   String
-  status       String           @default("active")
-  publicPhone  String?
-  publicEmail  String?
-  addressLine  String?
-  locality     String?
-  region       String?
-  country      String?
-  postalCode   String?
-  category     String?
-  notes        String?
-  owner        String?
-  archivedAt   DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  websites     Website[]
-  tags         ClientTag[]
-  activities   ClientActivity[]
-  auditScopes  AuditScope[]
-  auditJobs    AuditJob[]
+  id              String              @id @default(uuid())
+  businessName    String
+  searchText      String
+  status          String              @default("active")
+  publicPhone     String?
+  publicEmail     String?
+  addressLine     String?
+  locality        String?
+  region          String?
+  country         String?
+  postalCode      String?
+  category        String?
+  notes           String?
+  owner           String?
+  archivedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  websites        Website[]
+  tags            ClientTag[]
+  activities      ClientActivity[]
+  auditScopes     AuditScope[]
+  auditJobs       AuditJob[]
+  auditResults    AuditResultRecord[]
+  reportArtifacts ReportArtifact[]
 
   @@index([status, updatedAt])
   @@index([searchText])
 }
 
 model Website {
-  id               String         @id @default(uuid())
+  id               String              @id @default(uuid())
   clientId         String
   url              String
   normalizedUrl    String
-  normalizedDomain String         @unique
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  normalizedDomain String              @unique
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  client           Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
   pages            WebsitePage[]
   discoveryRuns    DiscoveryRun[]
   auditScopes      AuditScope[]
   auditJobs        AuditJob[]
+  auditResults     AuditResultRecord[]
+  reportArtifacts  ReportArtifact[]
 
   @@index([clientId])
 }
@@ -113,7 +117,7 @@ model DiscoveryRun {
 }
 
 model AuditScope {
-  id                 String           @id @default(uuid())
+  id                 String             @id @default(uuid())
   clientId           String
   websiteId          String
   clientBusinessName String
@@ -123,11 +127,12 @@ model AuditScope {
   reportFormatsJson  String
   requestedBy        String
   selectedPageCount  Int
-  createdAt          DateTime         @default(now())
-  client             Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  website            Website          @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  client             Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  website            Website            @relation(fields: [websiteId], references: [id], onDelete: Restrict)
   pages              AuditScopePage[]
   job                AuditJob?
+  result             AuditResultRecord?
 
   @@index([clientId, createdAt])
   @@index([websiteId, createdAt])
@@ -145,19 +150,19 @@ model AuditScopePage {
 }
 
 model AuditJob {
-  id                 String     @id @default(uuid())
-  scopeId            String     @unique
+  id                 String             @id @default(uuid())
+  scopeId            String             @unique
   clientId           String
   websiteId          String
   clientBusinessName String
   targetUrl          String
-  state              String     @default("queued")
-  pagesCompleted     Int        @default(0)
+  state              String             @default("queued")
+  pagesCompleted     Int                @default(0)
   pagesTotal         Int
-  failedPageCount    Int        @default(0)
-  warningCount       Int        @default(0)
-  warningsJson       String     @default("[]")
-  attempt            Int        @default(1)
+  failedPageCount    Int                @default(0)
+  warningCount       Int                @default(0)
+  warningsJson       String             @default("[]")
+  attempt            Int                @default(1)
   failureCode        String?
   failureMessage     String?
   resultJson         String?
@@ -165,14 +170,71 @@ model AuditJob {
   cancelRequestedAt  DateTime?
   startedAt          DateTime?
   completedAt        DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  scope              AuditScope @relation(fields: [scopeId], references: [id], onDelete: Restrict)
-  client             Client     @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  website            Website    @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  scope              AuditScope         @relation(fields: [scopeId], references: [id], onDelete: Restrict)
+  client             Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  website            Website            @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+  resultRecord       AuditResultRecord?
+  reportArtifacts    ReportArtifact[]
 
   @@index([clientId, createdAt])
   @@index([state, createdAt])
+  @@index([websiteId, createdAt])
+}
+
+model AuditResultRecord {
+  id                  String           @id @default(uuid())
+  jobId               String           @unique
+  scopeId             String           @unique
+  clientId            String
+  websiteId           String
+  auditId             String           @unique
+  schemaVersion       String
+  resultState         String
+  overallScore        Float
+  findingCountsJson   String
+  categoryScoresJson  String
+  canonicalResultJson String
+  startedAt           DateTime
+  completedAt         DateTime
+  retainedUntil       DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  job                 AuditJob         @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  scope               AuditScope       @relation(fields: [scopeId], references: [id], onDelete: Restrict)
+  client              Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  website             Website          @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+  artifacts           ReportArtifact[]
+
+  @@index([clientId, completedAt])
+  @@index([resultState, completedAt])
+  @@index([websiteId, completedAt])
+}
+
+model ReportArtifact {
+  id            String            @id @default(uuid())
+  resultId      String
+  jobId         String
+  clientId      String
+  websiteId     String
+  format        String
+  fileName      String
+  storedPath    String?
+  status        String
+  verifiedAt    DateTime?
+  retainedUntil DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  result        AuditResultRecord @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  job           AuditJob          @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  client        Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  website       Website           @relation(fields: [websiteId], references: [id], onDelete: Restrict)
+
+  @@unique([jobId, format])
+  @@index([clientId, createdAt])
+  @@index([resultId])
+  @@index([status, createdAt])
   @@index([websiteId, createdAt])
 }
 

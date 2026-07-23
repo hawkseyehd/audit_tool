@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  FileText,
   Pause,
   Pencil,
   Play,
@@ -12,7 +11,6 @@ import {
   Search,
   Trash2,
   UserRound,
-  type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -24,6 +22,7 @@ import type {
   ClientStatus,
 } from "../../shared/contracts.js";
 import { AuditJobs } from "../audits/audit-jobs.js";
+import { ReportLibrary } from "../reports/report-library.js";
 import { ClientForm } from "./client-form.js";
 import { WebsitePages } from "./website-pages.js";
 
@@ -49,21 +48,6 @@ type DetailTab = "profile" | "pages" | "audits" | "reports" | "activity";
 
 function ClientStatusLabel(props: { status: ClientStatus }): React.JSX.Element {
   return <span className={`client-status client-status-${props.status}`}>{props.status}</span>;
-}
-
-function EmptyClientSection(props: {
-  icon: LucideIcon;
-  text: string;
-  title: string;
-}): React.JSX.Element {
-  const Icon = props.icon;
-  return (
-    <div className="client-tab-empty">
-      <Icon aria-hidden="true" size={24} />
-      <strong>{props.title}</strong>
-      <p>{props.text}</p>
-    </div>
-  );
 }
 
 function ClientDetail(props: {
@@ -280,13 +264,7 @@ function ClientDetail(props: {
           <WebsitePages clientId={props.client.id} websiteUrl={props.client.websiteUrl} />
         )}
         {tab === "audits" && <AuditJobs clientId={props.client.id} />}
-        {tab === "reports" && (
-          <EmptyClientSection
-            icon={FileText}
-            title="No reports recorded"
-            text="Generated client and technical reports will appear here."
-          />
-        )}
+        {tab === "reports" && <ReportLibrary clientId={props.client.id} />}
         {tab === "activity" && (
           <ol className="activity-list">
             {props.client.activities.map((item) => (

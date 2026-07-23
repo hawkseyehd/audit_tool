@@ -6,12 +6,15 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { auditResultSchema } from "../../src/core/schemas.js";
+import { AuditHistoryRepository } from "../../src/desktop/main/audit-history-repository.js";
 import {
   AuditJobRepository,
   AuditJobTransitionError,
 } from "../../src/desktop/main/audit-job-repository.js";
 import { CLIENT_SCHEMA_STATEMENTS } from "../../src/desktop/main/client-migrations.js";
 import { JOB_SCHEMA_STATEMENTS } from "../../src/desktop/main/job-migrations.js";
+import { HISTORY_SCHEMA_STATEMENTS } from "../../src/desktop/main/history-migrations.js";
 import { PAGE_SCHEMA_STATEMENTS } from "../../src/desktop/main/page-migrations.js";
 import { SCOPE_SCHEMA_STATEMENTS } from "../../src/desktop/main/scope-migrations.js";
 import type {
@@ -50,6 +53,7 @@ beforeEach(async () => {
     ...PAGE_SCHEMA_STATEMENTS,
     ...SCOPE_SCHEMA_STATEMENTS,
     ...JOB_SCHEMA_STATEMENTS,
+    ...HISTORY_SCHEMA_STATEMENTS,
   ]) {
     await database.$executeRawUnsafe(statement);
   }
@@ -95,7 +99,7 @@ beforeEach(async () => {
   clientId = client.id;
   websiteId = website.id;
   scopeId = scope.id;
-  jobs = new AuditJobRepository(database);
+  jobs = new AuditJobRepository(database, path.join(directory, "audits"));
 });
 
 afterEach(async () => {
@@ -221,5 +225,64 @@ describe("AuditJobRepository", () => {
       error: { code: "not-retryable" },
       ok: false,
     });
+  });
+
+  it("atomically persists canonical history and requested report metadata", async () => {
+    const created = await jobs.createForScope(scopeId);
+    if (!created.ok) throw new Error("Expected audit job creation to succeed");
+    await jobs.markStarted(created.job.id);
+    await jobs.updateProgress(created.job.id, "scanning", 0, 0, []);
+    await jobs.updateProgress(created.job.id, "generating-reports", 0, 0, []);
+    const outputRoot = path.join(directory, "audits");
+    const result = auditResultSchema.parse({
+      auditId: "audit-history-test",
+      completedAt: "2026-07-24T10:05:00.000Z",
+      findings: [],
+      normalizedUrl: "https://northstar.test/",
+      outputs: { jsonReportPath: path.join(outputRoot, "audit-history-test", "audit-result.json") },
+      scannedPages: [],
+      schemaVersion: "1.0.0",
+      startedAt: "2026-07-24T10:00:00.000Z",
+      summary: {
+        categoryScores: {},
+        findingCounts: { critical: 0, high: 0, info: 0, low: 0, medium: 0 },
+        overallScore: 100,
+        topPriorities: [],
+      },
+      targetUrl: "https://northstar.test/",
+    });
+
+    await expect(
+      jobs.complete(created.job.id, result, outputRoot, true, ["One page was unavailable."]),
+    ).resolves.toMatchObject({
+      state: "partially-completed",
+      warningCount: 1,
+    });
+
+    const history = new AuditHistoryRepository(database);
+    await expect(
+      history.listHistory({
+        page: 1,
+        pageSize: 25,
+        resultState: "all",
+        search: "",
+        state: "all",
+      }),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          result: {
+            artifactCount: 3,
+            auditId: "audit-history-test",
+            availableArtifactCount: 1,
+            overallScore: 100,
+            resultState: "partially-completed",
+          },
+        },
+      ],
+      total: 1,
+    });
+    await expect(database.auditResultRecord.count()).resolves.toBe(1);
+    await expect(database.reportArtifact.count()).resolves.toBe(3);
   });
 });

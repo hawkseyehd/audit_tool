@@ -1,4 +1,4 @@
-# Current Feature: Background Audit Jobs and Progress
+# Current Feature: Audit History and Report Management
 
 ## Status
 
@@ -6,78 +6,74 @@ Complete
 
 ## Branch
 
-`feature/background-audit-jobs`
+`feature/audit-history-reports`
 
 ## Feature
 
-Feature 26 from `context/feature_list_in_order.md`.
+Feature 27 from `context/feature_list_in_order.md`.
 
 ## Objective
 
-Run immutable audit scopes as durable, cancellable background jobs in the Electron utility process
-while keeping the renderer and main event loop responsive and making progress understandable after
-renderer reloads or application recovery.
+Persist canonical audit history and report artifact metadata, then let users review and access
+reports from workspace and client views without exposing or accepting unrestricted filesystem
+paths in the renderer.
 
 ## Included Scope
 
-- Persist one idempotent audit job per immutable scope with stable ownership and timestamps.
-- Support queued, discovering, scanning, generating-reports, completed, partially-completed,
-  failed, and cancelled lifecycle states.
-- Persist page progress, attempts, warning counts, failed-page counts, cancellation requests, and
-  classified failures.
-- Recover interrupted work safely after application restart and resume queued work.
-- Run the existing audit orchestrator in the Electron utility process against the scope's exact
-  normalized URLs.
-- Add typed utility-process messages for execution, progress, completion, cancellation, and
-  shutdown.
-- Add external cancellation and high-level progress support to the audit orchestrator without
-  changing existing CLI behavior.
-- Add a main-process audit job manager with serial dispatch, worker-exit recovery, and cleanup.
-- Add sender-validated IPC and narrow preload methods for starting, listing, reading, and
-  cancelling jobs.
-- Add Impeccable client-level and workspace-level audit monitoring views with reconnect-safe
-  polling and accessible lifecycle states.
-- Preserve Feature 25 scope immutability and all existing crawler, scanner, report, and CLI safety.
+- Persist one canonical result record for every completed or partially completed audit job.
+- Retain immutable scope, client, website, audit schema, scores, finding counts, canonical JSON,
+  completion state, and retention timestamps.
+- Persist one report artifact record per requested format with safe filename, status, creation,
+  verification, and retention metadata.
+- Support available, missing, generation-failed, and expired artifact states without hiding the
+  completed audit.
+- Add database-backed workspace and client audit history queries with client search, lifecycle,
+  result-state, and date filtering plus pagination.
+- Add database-backed workspace and client report queries with status and format filtering plus
+  pagination.
+- Resolve open, reveal, and export operations from trusted artifact IDs in the Electron main
+  process.
+- Validate every stored source path against the application-owned audit directory before access.
+- Use the native save dialog for export and never accept a destination path from renderer input.
+- Add sender-validated IPC and narrow preload methods for history, artifact listing, open, reveal,
+  and export.
+- Build Impeccable workspace and client audit/report views with loading, empty, partial, failed,
+  missing, generation-failed, success, and cancelled-export states.
+- Preserve Feature 26 background execution, exact immutable scope, CLI behavior, and all crawler
+  and browser safety constraints.
 
 ## Excluded Scope
 
-- Full audit history filtering and report artifact open, reveal, and export workflows, implemented
-  in Feature 27.
-- Release 2A installer acceptance and clean-machine validation, implemented in Feature 28.
+- Full Release 2A installer acceptance and clean-machine validation, implemented in Feature 28.
+- Prospect and campaign data, implemented in Features 29 through 33.
+- Arbitrary report deletion or configurable retention policy editing.
 
 ## Acceptance Criteria
 
-- Starting the same immutable scope repeatedly returns one job and never duplicates execution.
-- Audit work executes outside the renderer and Electron main event loop.
-- The utility process receives only validated scope data, configuration, and application-owned
-  output locations.
-- Only the exact scope URLs are crawled and scanned.
-- Job lifecycle transitions are validated and persisted with actionable failure classifications.
-- Renderer reload or window recreation can reconstruct current progress from SQLite.
-- Interrupted active jobs recover safely to queued work after application restart.
-- Cancellation aborts active audit work and closes browser, Lighthouse, and temporary resources.
-- Recoverable page or scanner failures produce a partially-completed job instead of hiding
-  successful work.
-- Client and workspace monitoring UIs cover loading, empty, running, partial, failed, completed,
-  cancellation, and worker-unavailable states.
-- Strict persistence, protocol, IPC, renderer, cancellation, recovery, and exact-scope tests cover
-  the workflow.
+- Completed and partially completed jobs persist canonical result history independently of client
+  or page edits.
+- Requested report formats persist as explicit artifact records, including failed or missing
+  generation states.
+- Renderer contracts never expose application-owned report filesystem paths.
+- Open and reveal accept only artifact IDs and reject missing, failed, expired, out-of-root, or
+  symlink-escaped files.
+- Export uses a native user-selected destination and never accepts a renderer-provided path.
+- Workspace and client audit tables filter by client, status, date, and result state.
+- Workspace and client report views list every supported format with useful access states.
+- Existing completed jobs without result records are handled safely and remain visible.
+- Strict persistence, path-safety, IPC, renderer, artifact-action, and historical-retention tests
+  cover the workflow.
 - All project quality, packaging, smoke, Impeccable, and visual gates pass.
 
 ## History
 
-- 2026-07-24: Feature started after Feature 25 and the Electron development-entry regression fix
-  passed 245 tests, packaging, packaged smoke, and renderer-level launch verification.
-- 2026-07-24: Added durable idempotent audit jobs, validated lifecycle transitions, exact immutable
-  scope execution, persisted progress and warnings, safe retries and cancellation, restart
-  recovery, utility-process orchestration, and bounded shutdown cleanup.
-- 2026-07-24: Added sender-validated audit IPC, a narrow preload API, deliberate audit start from
-  the locked scope, and Impeccable workspace and client audit monitors with compact-window
-  behavior, useful failures, warnings, progress, cancellation, and retry actions.
-- 2026-07-24: Corrected Electron Forge production packaging for pnpm, Playwright, Lighthouse, and
-  Prisma by using the required hoisted dependency layout, runtime externals, dynamic Lighthouse
-  loading, pruned module packaging, and a deterministic isolated packaged-ASAR smoke harness.
-- 2026-07-24: Feature completed after the full test suite, formatting, linting, strict CLI and
-  desktop type checking, Prisma schema validation, production build, Windows Electron packaging,
-  packaged-ASAR database and utility-worker smoke, clean Impeccable detection, and standard and
-  compact visual review passed.
+- 2026-07-24: Feature started after Feature 26 passed 259 tests, formatting, linting, strict type
+  checking, Prisma validation, CLI build, Electron packaging, packaged-ASAR database and utility
+  worker smoke, clean Impeccable detection, and compact and standard visual review.
+- 2026-07-24: Added transactional canonical result and report artifact persistence, database-backed
+  workspace and client history, secure identifier-only report actions, native export, and
+  Impeccable audit and report views.
+- 2026-07-24: Feature completed after Prisma generation and validation, formatting, zero-warning
+  linting, strict CLI and Electron type checking, 55 test files with 267 passing tests, production
+  CLI build, Electron Forge packaging, packaged-ASAR database and worker smoke, clean Impeccable
+  detection, and standard and compact visual review of audit history and report management.

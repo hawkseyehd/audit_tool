@@ -194,11 +194,13 @@ scope confirmation, responsive wrapping, row hierarchy, horizontal table access,
 focus targets were clear with no overlap or clipping. The Impeccable layout and type detectors
 returned no findings.
 
-The complete Feature 25 regression gate passed 244 tests across 50 files. Formatting, zero-warning
+The complete Feature 25 regression gate passed 245 tests across 51 files. Formatting, zero-warning
 linting, strict CLI and desktop type checking, Prisma schema validation, the CLI production build,
 Windows x64 Electron packaging, compiled scope-lock smoke, and the production dependency audit all
 passed. The database and worker services reported ready, and no known production vulnerabilities
-were found.
+were found. A generated-entry regression test and renderer-level development launch check confirm
+Electron 43 resolves Forge's `.webpack/main` entry and displays the real workspace instead of its
+native missing-module dialog.
 
 The Markdown report was checked for the complete PRD section list, readable empty and partial
 states, business-oriented impact and recommendation text, evidence labels, page failures,

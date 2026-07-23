@@ -61,3 +61,5 @@ into an immutable audit scope that cannot be changed by later rediscovery or cli
   desktop type checking, Prisma validation, the CLI build, Windows Electron packaging, compiled
   scope-lock smoke, full-page standard and compact visual review, clean Impeccable scans, and the
   production dependency audit all passed.
+- 2026-07-23: Added and regression-tested a generated development entry bridge so Electron 43 can
+  resolve Forge's required `.webpack/main` package entry and open the real renderer workspace.

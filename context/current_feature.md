@@ -1,4 +1,4 @@
-# Current Feature: Release 2A Integration and Acceptance
+# Current Feature: Prospect Data Foundation
 
 ## Status
 
@@ -6,71 +6,64 @@ Complete
 
 ## Branch
 
-`feature/release-2a-acceptance`
+`feature/prospect-data-foundation`
 
 ## Feature
 
-Feature 28 from `context/feature_list_in_order.md`.
+Feature 29 from `context/feature_list_in_order.md`.
 
 ## Objective
 
-Prove the complete client-to-report desktop workflow, harden its operational boundaries, and
-produce a signed-ready Windows installer whose packaged runtime includes every required audit and
-report dependency.
+Establish a separate, provenance-aware prospect and campaign data model, then provide a
+searchable desktop prospect workspace with lifecycle, qualification, suppression, deletion, and
+provider-defined retention controls.
 
 ## Included Scope
 
-- Cover client creation, page discovery, durable selection, immutable scope, background audit
-  execution, canonical history, and secure report access as one integrated workflow.
-- Verify historical scopes remain unchanged after rediscovery and client edits.
-- Verify the existing CLI remains buildable and operational.
-- Test keyboard workflows, accessible names, resizable layouts, compact navigation, display
-  scaling, loading, failure, permission, and destructive-action states.
-- Test worker restart, cancellation, partial completion, application shutdown, and browser cleanup.
-- Produce a Squirrel.Windows installer configured for signing without storing signing secrets.
-- Inspect packaged ASAR contents for Playwright, Chromium integration, Lighthouse, Prisma, and PDF
-  generation support.
-- Add deterministic package and installer acceptance scripts with machine-readable evidence.
-- Run formatting, lint, strict type checking, tests, dependency review, production build,
-  packaging, installer creation, packaged smoke, Impeccable detection, and visual QA.
+- Add durable Prospect, DiscoveryCampaign, DiscoverySourceRecord, ProspectTag,
+  ProspectActivity, and SuppressionRecord models and runtime migrations.
+- Store campaign criteria, limits, lifecycle state, provider, continuation, and failure metadata
+  without executing provider requests.
+- Store prospect ownership, tags, notes, confidence, public business fields, website availability,
+  verification timestamps, duplicate-review state, source provenance, and retention deadlines.
+- Reject source imports that match durable domain or provider-record suppression keys.
+- Support new, reviewing, qualified, not-qualified, promoted, and suppressed lifecycle states.
+- Support editable qualification metadata, suppression with optional do-not-contact status,
+  exact-name-confirmed deletion, and expiry cleanup that preserves promoted provenance.
+- Add database-backed search, lifecycle, website-availability, confidence, owner, sorting, and
+  pagination controls.
+- Add sender-validated IPC and a narrow preload API for prospect operations.
+- Build and visually verify an Impeccable prospect table, detail editor, activity history,
+  destructive controls, and loading, empty, error, and disabled states.
 
 ## Excluded Scope
 
-- Purchasing or applying a production code-signing certificate.
-- Testing on a separate physical clean Windows machine that is not connected to this workspace.
-- Prospect, campaign, provider, enrichment, qualification, or promotion features from Release 2B.
+- Campaign creation UI, provider authentication, network adapters, campaign execution, radius
+  capability negotiation, retries, and continuation processing from Feature 30.
+- Prospect website verification and opportunity signals from Feature 31.
+- Prospect scoring, promotion into clients, and duplicate resolution from Feature 32.
+- Automatic outreach, form submission, or collection from unauthorized sources.
 
 ## Acceptance Criteria
 
-- The client-to-report workflow passes end to end using deterministic local fixtures.
-- Rediscovery and client edits cannot mutate a previously locked scope.
-- Cancellation, partial failures, worker interruption, and shutdown leave durable, understandable
-  states and no project-owned browser or Electron processes.
-- Renderer and preload accessibility checks cover keyboard reachability and usable names.
-- Standard and compact packaged screens remain readable without incoherent overlap.
-- The packaged runtime starts from ASAR with database and worker services ready.
-- The packaged runtime contains all production scanner, Prisma, Playwright, Lighthouse, and report
-  dependencies.
-- Squirrel.Windows setup artifacts are generated and signing configuration remains environment
-  driven.
-- The CLI build and smoke command remain operational.
-- All project quality and acceptance gates pass with recorded evidence.
+- Prospects and clients are separate database records and UI destinations.
+- Campaign and source schemas retain validated criteria, limits, provenance, and retention data.
+- Prospect lists are database-paginated and support documented search and filters.
+- Qualification metadata and supported non-promotion lifecycle states persist with activity.
+- Suppression creates durable match records, can mark do-not-contact, and blocks re-import after
+  prospect deletion.
+- Retention cleanup deletes expired unpromoted prospects while retaining suppression tombstones.
+- Renderer inputs are runtime validated and all privileged operations remain in Electron main.
+- Existing client, audit, report, package, and CLI behavior remains operational.
+- Formatting, lint, type checking, tests, build, Impeccable detection, accessibility, and visual
+  checks pass.
 
 ## History
 
-- 2026-07-24: Feature completed with the deterministic client-to-report workflow, immutable-scope
-  rediscovery coverage, packaged-browser environment configuration, project-managed Chromium,
-  signed-ready Squirrel configuration, package-content inspection, and machine-readable release
-  evidence.
-- 2026-07-24: Final gates passed Prisma validation, formatting, zero-warning linting, strict CLI
-  and Electron type checking, 58 test files with 271 passing tests, production CLI build and help
-  smoke, production dependency audit with no known vulnerabilities, clean Impeccable detection,
-  and standard and compact visual review.
-- 2026-07-24: The final Squirrel package passed ASAR startup with ready database and worker
-  services, keyboard reachability, 125% display scaling, five live axe scans, report-history
-  rendering, and installer inspection. Packaged Chromium generated a valid PDF and completed a
-  Lighthouse run with a score of 100 against a deterministic local target.
-- 2026-07-24: Feature started after Feature 27 passed Prisma validation, formatting, zero-warning
-  linting, strict CLI and Electron type checking, 55 test files with 267 passing tests, production
-  CLI build, Electron packaging, packaged-ASAR smoke, clean Impeccable detection, and standard and
-  compact audit-history and report-library visual review.
+- 2026-07-25: Feature started after Release 2A acceptance completed and was pushed to `main`.
+- 2026-07-25: Added separate prospect and campaign persistence, provenance-aware imports,
+  qualification lifecycle controls, durable suppression and do-not-contact handling,
+  provider-defined retention cleanup, and the Impeccable prospect workspace.
+- 2026-07-25: Passed Prisma validation, formatting, zero-warning linting, strict CLI and desktop
+  type checking, 276 tests across 60 files, the CLI production build, Windows x64 Electron
+  packaging, packaged ASAR smoke, axe scans, Impeccable detection, and desktop visual review.

@@ -19,19 +19,29 @@ import {
   createAuditScopeResultSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
+  deleteProspectRequestSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
-  getClientRequestSchema,
   getAuditScopeRequestSchema,
+  getClientRequestSchema,
+  getProspectRequestSchema,
   IPC_CHANNELS,
-  setClientStatusRequestSchema,
   pageSelectionResultSchema,
+  prospectActionResultSchema,
+  prospectListQuerySchema,
+  prospectListResultSchema,
+  prospectMutationResultSchema,
+  prospectRecordSchema,
   reportArtifactActionRequestSchema,
   reportArtifactActionResultSchema,
   reportArtifactListQuerySchema,
   reportArtifactListResultSchema,
+  setClientStatusRequestSchema,
+  setProspectStateRequestSchema,
   startAuditJobRequestSchema,
+  suppressProspectRequestSchema,
   updateClientRequestSchema,
+  updateProspectRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
 } from "../shared/contracts.js";
@@ -92,6 +102,45 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     const request = deleteClientRequestSchema.parse(input);
     return deleteClientResultSchema.parse(
       await services.database.deleteClient(request.id, request.confirmation),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.listProspects, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = prospectListQuerySchema.parse(input);
+    return prospectListResultSchema.parse(await services.database.listProspects(query));
+  });
+  ipcMain.handle(IPC_CHANNELS.getProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = getProspectRequestSchema.parse(input);
+    const prospect = await services.database.getProspect(request.id);
+    return prospect === null ? null : prospectRecordSchema.parse(prospect);
+  });
+  ipcMain.handle(IPC_CHANNELS.updateProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = updateProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await services.database.updateProspect(request.id, request.input),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.setProspectState, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = setProspectStateRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await services.database.setProspectState(request.id, request.state),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.suppressProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = suppressProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await services.database.suppressProspect(request.id, request.reason, request.doNotContact),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.deleteProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = deleteProspectRequestSchema.parse(input);
+    return prospectActionResultSchema.parse(
+      await services.database.deleteProspect(request.id, request.confirmation),
     );
   });
   ipcMain.handle(IPC_CHANNELS.listWebsitePages, async (event, input: unknown) => {

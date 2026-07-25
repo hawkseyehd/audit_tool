@@ -15,30 +15,31 @@ model AppMetadata {
 }
 
 model Client {
-  id              String              @id @default(uuid())
-  businessName    String
-  searchText      String
-  status          String              @default("active")
-  publicPhone     String?
-  publicEmail     String?
-  addressLine     String?
-  locality        String?
-  region          String?
-  country         String?
-  postalCode      String?
-  category        String?
-  notes           String?
-  owner           String?
-  archivedAt      DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  websites        Website[]
-  tags            ClientTag[]
-  activities      ClientActivity[]
-  auditScopes     AuditScope[]
-  auditJobs       AuditJob[]
-  auditResults    AuditResultRecord[]
-  reportArtifacts ReportArtifact[]
+  id                String              @id @default(uuid())
+  businessName      String
+  searchText        String
+  status            String              @default("active")
+  publicPhone       String?
+  publicEmail       String?
+  addressLine       String?
+  locality          String?
+  region            String?
+  country           String?
+  postalCode        String?
+  category          String?
+  notes             String?
+  owner             String?
+  archivedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  websites          Website[]
+  tags              ClientTag[]
+  activities        ClientActivity[]
+  auditScopes       AuditScope[]
+  auditJobs         AuditJob[]
+  auditResults      AuditResultRecord[]
+  reportArtifacts   ReportArtifact[]
+  promotedProspects Prospect[]          @relation("PromotedProspectClient")
 
   @@index([status, updatedAt])
   @@index([searchText])
@@ -239,11 +240,12 @@ model ReportArtifact {
 }
 
 model Tag {
-  id             String      @id @default(uuid())
+  id             String        @id @default(uuid())
   name           String
-  normalizedName String      @unique
-  createdAt      DateTime    @default(now())
+  normalizedName String        @unique
+  createdAt      DateTime      @default(now())
   clients        ClientTag[]
+  prospects      ProspectTag[]
 }
 
 model ClientTag {
@@ -265,4 +267,144 @@ model ClientActivity {
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, createdAt])
+}
+
+model DiscoveryCampaign {
+  id                   String                  @id @default(uuid())
+  name                 String
+  provider             String
+  providerTermsVersion String
+  state                String                  @default("draft")
+  country              String
+  region               String?
+  locality             String?
+  radiusKm             Float?
+  category             String?
+  keywordsJson         String                  @default("[]")
+  maxResults           Int
+  requireWebsite       Boolean                 @default(true)
+  requiredFieldsJson   String                  @default("[]")
+  exclusionRulesJson   String                  @default("[]")
+  continuationDataJson String?
+  resultCount          Int                     @default(0)
+  failureMessage       String?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  prospects            Prospect[]
+  sourceRecords        DiscoverySourceRecord[]
+
+  @@index([state, updatedAt])
+  @@index([provider, createdAt])
+}
+
+model Prospect {
+  id                   String                  @id @default(uuid())
+  campaignId           String?
+  promotedClientId     String?
+  businessName         String
+  searchText           String
+  state                String                  @default("new")
+  websiteUrl           String?
+  normalizedWebsiteUrl String?
+  normalizedDomain     String?
+  category             String?
+  publicPhone          String?
+  publicEmail          String?
+  addressLine          String?
+  locality             String?
+  region               String?
+  country              String?
+  postalCode           String?
+  serviceArea          String?
+  socialProfilesJson   String                  @default("[]")
+  websiteAvailability  String                  @default("unknown")
+  discoveredPageCount  Int?
+  confidence           Int                     @default(0)
+  duplicateReviewState String                  @default("not-reviewed")
+  owner                String?
+  notes                String?
+  doNotContactAt       DateTime?
+  suppressedAt         DateTime?
+  firstDiscoveredAt    DateTime
+  lastVerifiedAt       DateTime?
+  sourceUpdatedAt      DateTime?
+  retainedUntil        DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  campaign             DiscoveryCampaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  promotedClient       Client?                 @relation("PromotedProspectClient", fields: [promotedClientId], references: [id], onDelete: SetNull)
+  tags                 ProspectTag[]
+  activities           ProspectActivity[]
+  sourceRecords        DiscoverySourceRecord[]
+
+  @@index([state, updatedAt])
+  @@index([searchText])
+  @@index([normalizedDomain])
+  @@index([websiteAvailability, lastVerifiedAt])
+  @@index([owner])
+  @@index([retainedUntil])
+}
+
+model ProspectTag {
+  prospectId String
+  tagId      String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([prospectId, tagId])
+  @@index([tagId])
+}
+
+model ProspectActivity {
+  id         String   @id @default(uuid())
+  prospectId String
+  kind       String
+  summary    String
+  createdAt  DateTime @default(now())
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([prospectId, createdAt])
+}
+
+model DiscoverySourceRecord {
+  id                  String             @id @default(uuid())
+  prospectId          String
+  campaignId          String?
+  provider            String
+  providerRecordId    String
+  sourceUrl           String?
+  collectedAt         DateTime
+  lastVerifiedAt      DateTime?
+  sourceUpdatedAt     DateTime?
+  fieldProvenanceJson String
+  permittedFieldsJson String
+  retentionPolicy     String
+  retainedUntil       DateTime
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  prospect            Prospect           @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  campaign            DiscoveryCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerRecordId])
+  @@index([prospectId, collectedAt])
+  @@index([campaignId])
+  @@index([retainedUntil])
+}
+
+model SuppressionRecord {
+  id               String    @id @default(uuid())
+  matchKey         String    @unique
+  matchType        String
+  reason           String
+  doNotContact     Boolean   @default(false)
+  sourceProspectId String?
+  lastMatchedAt    DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([expiresAt])
+  @@index([sourceProspectId])
 }

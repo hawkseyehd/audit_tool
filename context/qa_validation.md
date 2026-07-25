@@ -211,6 +211,25 @@ The JSON report is two-space formatted, newline-terminated, schema-versioned, an
 through `auditResultSchema` without transformation. The persisted object exactly matches the
 returned object and contains final output paths.
 
+## Prospect Data Foundation Validation
+
+Feature 29 adds separate campaign, prospect, source-provenance, activity, tag, and suppression
+records. Repository tests verify validated source imports, provider-record deduplication,
+qualification persistence, database-backed search and filters, lifecycle transition guards,
+durable domain and source suppression, do-not-contact state, exact-name deletion confirmation,
+re-import blocking, and retention cleanup that preserves promoted records.
+
+The packaged Electron application rendered the prospect list at 1280 x 820 and 900 x 700 and the
+qualification detail workspace at compact width. Full-page captures were inspected at full
+resolution. Search and filters, lifecycle and website states, provenance, confidence, ownership,
+qualification editing, suppression, deletion controls, responsive columns, focus targets, and
+disabled states were clear with no overlap or clipping. Automated axe scans of the list and detail
+views passed, and the Impeccable detector returned no findings.
+
+The complete Feature 29 regression gate passed 276 tests across 60 files. Formatting,
+zero-warning linting, strict CLI and desktop type checking, Prisma schema validation, the CLI
+production build, Windows x64 Electron packaging, and the packaged ASAR smoke test passed.
+
 ## Failure and Cleanup Evidence
 
 - Individual crawl page failures remain in `scannedPages` while the crawl continues.

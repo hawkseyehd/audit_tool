@@ -17,14 +17,20 @@ export const IPC_CHANNELS = {
   listAuditJobs: "desktop:audits:list",
   listAuditHistory: "desktop:audit-history:list",
   listClients: "desktop:clients:list",
+  listProspects: "desktop:prospects:list",
   listReportArtifacts: "desktop:reports:list",
   listWebsitePages: "desktop:pages:list",
   openReport: "desktop:reports:open",
   revealReport: "desktop:reports:reveal",
   retryAuditJob: "desktop:audits:retry",
+  deleteProspect: "desktop:prospects:delete",
+  getProspect: "desktop:prospects:get",
+  setProspectState: "desktop:prospects:set-state",
   setClientStatus: "desktop:clients:set-status",
   startAuditJob: "desktop:audits:start",
+  suppressProspect: "desktop:prospects:suppress",
   updateClient: "desktop:clients:update",
+  updateProspect: "desktop:prospects:update",
 } as const;
 
 export const CLIENT_STATUSES = ["active", "paused", "archived"] as const;
@@ -145,6 +151,249 @@ export const deleteClientResultSchema = z.discriminatedUnion("ok", [
       error: z
         .object({
           code: z.enum(["not-found", "confirmation-mismatch", "retained-history"]),
+          message: z.string().trim().min(1).max(500),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
+export const PROSPECT_STATES = [
+  "new",
+  "reviewing",
+  "qualified",
+  "not-qualified",
+  "promoted",
+  "suppressed",
+] as const;
+export const PROSPECT_WEBSITE_AVAILABILITIES = ["unknown", "available", "unavailable"] as const;
+export const PROSPECT_DUPLICATE_REVIEW_STATES = [
+  "not-reviewed",
+  "possible-duplicate",
+  "confirmed-distinct",
+] as const;
+export const CAMPAIGN_STATES = [
+  "draft",
+  "queued",
+  "running",
+  "paused",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+
+export const prospectStateSchema = z.enum(PROSPECT_STATES);
+export const prospectWebsiteAvailabilitySchema = z.enum(PROSPECT_WEBSITE_AVAILABILITIES);
+export const prospectDuplicateReviewStateSchema = z.enum(PROSPECT_DUPLICATE_REVIEW_STATES);
+export const campaignStateSchema = z.enum(CAMPAIGN_STATES);
+export const prospectIdSchema = z.uuid();
+export const campaignIdSchema = z.uuid();
+
+export const campaignInputSchema = z
+  .object({
+    category: optionalText(120),
+    country: z.string().trim().min(1).max(100),
+    exclusionRules: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+    keywords: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+    locality: optionalText(120),
+    maxResults: z.number().int().min(1).max(5_000),
+    name: z.string().trim().min(1).max(200),
+    provider: z.string().trim().min(1).max(100),
+    providerTermsVersion: z.string().trim().min(1).max(100),
+    radiusKm: z.number().positive().max(500).optional(),
+    region: optionalText(120),
+    requireWebsite: z.boolean().default(true),
+    requiredFields: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
+  })
+  .strict();
+
+export const prospectSourceInputSchema = z
+  .object({
+    addressLine: optionalText(300),
+    businessName: z.string().trim().min(1).max(200),
+    campaignId: campaignIdSchema.optional(),
+    category: optionalText(120),
+    collectedAt: z.iso.datetime(),
+    country: optionalText(100),
+    fieldProvenance: z.record(z.string(), z.string().trim().min(1).max(500)),
+    lastVerifiedAt: z.iso.datetime().optional(),
+    locality: optionalText(120),
+    permittedFields: z.array(z.string().trim().min(1).max(100)).max(50),
+    postalCode: optionalText(30),
+    provider: z.string().trim().min(1).max(100),
+    providerRecordId: z.string().trim().min(1).max(300),
+    publicEmail: z.email().max(320).optional(),
+    publicPhone: optionalText(50),
+    region: optionalText(120),
+    retentionDays: z.number().int().min(1).max(3_650),
+    retentionPolicy: z.string().trim().min(1).max(500),
+    serviceArea: optionalText(300),
+    socialProfiles: z.array(z.url().max(2_048)).max(20).default([]),
+    sourceUpdatedAt: z.iso.datetime().optional(),
+    sourceUrl: z.url().max(2_048).optional(),
+    websiteUrl: z.url().max(2_048).optional(),
+  })
+  .strict();
+
+export const prospectActivitySchema = z
+  .object({
+    createdAt: z.iso.datetime(),
+    id: z.uuid(),
+    kind: z.string().trim().min(1).max(50),
+    summary: z.string().trim().min(1).max(500),
+  })
+  .strict();
+
+export const prospectSourceRecordSchema = z
+  .object({
+    collectedAt: z.iso.datetime(),
+    fieldProvenance: z.record(z.string(), z.string()),
+    id: z.uuid(),
+    lastVerifiedAt: z.iso.datetime().nullable(),
+    permittedFields: z.array(z.string()),
+    provider: z.string().trim().min(1).max(100),
+    providerRecordId: z.string().trim().min(1).max(300),
+    retainedUntil: z.iso.datetime(),
+    retentionPolicy: z.string().trim().min(1).max(500),
+    sourceUpdatedAt: z.iso.datetime().nullable(),
+    sourceUrl: z.url().nullable(),
+  })
+  .strict();
+
+export const prospectRecordSchema = z
+  .object({
+    activities: z.array(prospectActivitySchema).max(100),
+    addressLine: z.string().nullable(),
+    businessName: z.string().trim().min(1).max(200),
+    campaignId: campaignIdSchema.nullable(),
+    category: z.string().nullable(),
+    confidence: z.number().int().min(0).max(100),
+    country: z.string().nullable(),
+    createdAt: z.iso.datetime(),
+    discoveredPageCount: z.number().int().nonnegative().nullable(),
+    doNotContactAt: z.iso.datetime().nullable(),
+    duplicateReviewState: prospectDuplicateReviewStateSchema,
+    firstDiscoveredAt: z.iso.datetime(),
+    id: prospectIdSchema,
+    lastVerifiedAt: z.iso.datetime().nullable(),
+    locality: z.string().nullable(),
+    normalizedDomain: z.string().nullable(),
+    notes: z.string().nullable(),
+    owner: z.string().nullable(),
+    postalCode: z.string().nullable(),
+    promotedClientId: clientIdSchema.nullable(),
+    publicEmail: z.string().nullable(),
+    publicPhone: z.string().nullable(),
+    region: z.string().nullable(),
+    retainedUntil: z.iso.datetime().nullable(),
+    serviceArea: z.string().nullable(),
+    socialProfiles: z.array(z.url()),
+    sourceProvider: z.string().nullable(),
+    sourceRecordCount: z.number().int().nonnegative(),
+    sourceRecords: z.array(prospectSourceRecordSchema).max(100),
+    sourceUpdatedAt: z.iso.datetime().nullable(),
+    state: prospectStateSchema,
+    suppressedAt: z.iso.datetime().nullable(),
+    tags: z.array(z.string().trim().min(1).max(50)).max(20),
+    updatedAt: z.iso.datetime(),
+    websiteAvailability: prospectWebsiteAvailabilitySchema,
+    websiteUrl: z.url().nullable(),
+  })
+  .strict();
+
+export const prospectQualificationInputSchema = z
+  .object({
+    confidence: z.number().int().min(0).max(100),
+    duplicateReviewState: prospectDuplicateReviewStateSchema,
+    notes: optionalText(5_000),
+    owner: optionalText(120),
+    tags: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
+  })
+  .strict();
+
+export const prospectListQuerySchema = z
+  .object({
+    confidenceAtLeast: z.number().int().min(0).max(100).default(0),
+    direction: z.enum(["asc", "desc"]).default("desc"),
+    owner: z.string().trim().max(120).default(""),
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(10).max(100).default(25),
+    search: z.string().trim().max(200).default(""),
+    sort: z
+      .enum(["businessName", "confidence", "lastVerifiedAt", "updatedAt"])
+      .default("updatedAt"),
+    state: z.union([prospectStateSchema, z.literal("all")]).default("all"),
+    websiteAvailability: z
+      .union([prospectWebsiteAvailabilitySchema, z.literal("all")])
+      .default("all"),
+  })
+  .strict();
+
+export const prospectListItemSchema = prospectRecordSchema.omit({
+  activities: true,
+  notes: true,
+  sourceRecords: true,
+});
+export const prospectListResultSchema = z
+  .object({
+    items: z.array(prospectListItemSchema),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const prospectMutationResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), prospect: prospectRecordSchema }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum(["invalid-transition", "not-found", "suppressed"]),
+          message: z.string().trim().min(1).max(500),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
+export const prospectImportResultSchema = z.discriminatedUnion("status", [
+  z.object({ prospect: prospectRecordSchema, status: z.literal("created") }).strict(),
+  z.object({ prospect: prospectRecordSchema, status: z.literal("existing") }).strict(),
+  z
+    .object({
+      matchType: z.enum(["domain", "source-record"]),
+      status: z.literal("suppressed"),
+    })
+    .strict(),
+]);
+
+export const getProspectRequestSchema = z.object({ id: prospectIdSchema }).strict();
+export const updateProspectRequestSchema = z
+  .object({ id: prospectIdSchema, input: prospectQualificationInputSchema })
+  .strict();
+export const setProspectStateRequestSchema = z
+  .object({ id: prospectIdSchema, state: prospectStateSchema })
+  .strict();
+export const suppressProspectRequestSchema = z
+  .object({
+    doNotContact: z.boolean().default(false),
+    id: prospectIdSchema,
+    reason: z.string().trim().min(1).max(500),
+  })
+  .strict();
+export const deleteProspectRequestSchema = z
+  .object({ confirmation: z.string().trim().min(1).max(200), id: prospectIdSchema })
+  .strict();
+export const prospectActionResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum(["confirmation-mismatch", "not-found", "promoted"]),
           message: z.string().trim().min(1).max(500),
         })
         .strict(),
@@ -692,6 +941,18 @@ export type ClientMutationResult = z.infer<typeof clientMutationResultSchema>;
 export type ClientRecord = z.infer<typeof clientRecordSchema>;
 export type ClientStatus = z.infer<typeof clientStatusSchema>;
 export type DeleteClientResult = z.infer<typeof deleteClientResultSchema>;
+export type CampaignInput = z.infer<typeof campaignInputSchema>;
+export type CampaignState = z.infer<typeof campaignStateSchema>;
+export type ProspectActionResult = z.infer<typeof prospectActionResultSchema>;
+export type ProspectImportResult = z.infer<typeof prospectImportResultSchema>;
+export type ProspectListQuery = z.infer<typeof prospectListQuerySchema>;
+export type ProspectListResult = z.infer<typeof prospectListResultSchema>;
+export type ProspectMutationResult = z.infer<typeof prospectMutationResultSchema>;
+export type ProspectQualificationInput = z.infer<typeof prospectQualificationInputSchema>;
+export type ProspectRecord = z.infer<typeof prospectRecordSchema>;
+export type ProspectSourceInput = z.infer<typeof prospectSourceInputSchema>;
+export type ProspectState = z.infer<typeof prospectStateSchema>;
+export type ProspectWebsiteAvailability = z.infer<typeof prospectWebsiteAvailabilitySchema>;
 export type DiscoveryResult = z.infer<typeof discoveryResultSchema>;
 export type DiscoveryRun = z.infer<typeof discoveryRunSchema>;
 export type AuditScopeConfiguration = z.infer<typeof auditScopeConfigurationSchema>;
@@ -732,6 +993,9 @@ export interface DesktopApi {
     request: z.infer<typeof createAuditScopeRequestSchema>,
   ): Promise<CreateAuditScopeResult>;
   deleteClient(request: z.infer<typeof deleteClientRequestSchema>): Promise<DeleteClientResult>;
+  deleteProspect(
+    request: z.infer<typeof deleteProspectRequestSchema>,
+  ): Promise<ProspectActionResult>;
   discoverWebsitePages(
     request: z.infer<typeof discoverWebsitePagesRequestSchema>,
   ): Promise<DiscoveryResult>;
@@ -744,9 +1008,11 @@ export interface DesktopApi {
   ): Promise<AuditScopeRecord | null>;
   getAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobRecord | null>;
   getClient(request: z.infer<typeof getClientRequestSchema>): Promise<ClientRecord | null>;
+  getProspect(request: z.infer<typeof getProspectRequestSchema>): Promise<ProspectRecord | null>;
   listAuditHistory(query: AuditHistoryListQuery): Promise<AuditHistoryListResult>;
   listAuditJobs(query: AuditJobListQuery): Promise<AuditJobListResult>;
   listClients(query: ClientListQuery): Promise<ClientListResult>;
+  listProspects(query: ProspectListQuery): Promise<ProspectListResult>;
   listReportArtifacts(query: ReportArtifactListQuery): Promise<ReportArtifactListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;
   openReport(
@@ -756,11 +1022,20 @@ export interface DesktopApi {
     request: z.infer<typeof reportArtifactActionRequestSchema>,
   ): Promise<ReportArtifactActionResult>;
   retryAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
+  setProspectState(
+    request: z.infer<typeof setProspectStateRequestSchema>,
+  ): Promise<ProspectMutationResult>;
   setClientStatus(
     request: z.infer<typeof setClientStatusRequestSchema>,
   ): Promise<ClientMutationResult>;
   startAuditJob(
     request: z.infer<typeof startAuditJobRequestSchema>,
   ): Promise<AuditJobMutationResult>;
+  suppressProspect(
+    request: z.infer<typeof suppressProspectRequestSchema>,
+  ): Promise<ProspectMutationResult>;
   updateClient(request: z.infer<typeof updateClientRequestSchema>): Promise<ClientMutationResult>;
+  updateProspect(
+    request: z.infer<typeof updateProspectRequestSchema>,
+  ): Promise<ProspectMutationResult>;
 }

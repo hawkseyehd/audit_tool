@@ -20,6 +20,8 @@ public business websites and turns technical evidence into prioritized, client-r
   SQLite workspace, isolated utility worker, and Windows packaging.
 - Persistent client directory with normalized domains, search, status filters, lifecycle controls,
   activity history, and focused client workspaces for pages, audits, and reports.
+- Separate provenance-aware prospect workspace with qualification states, search, filters,
+  pagination, durable suppression, do-not-contact controls, and provider-defined retention.
 - Safe lightweight website discovery with durable page inventories, classifications, availability,
   recommendations, rediscovery changes, search, filters, and bounded pagination.
 - Durable page inclusion and exclusion with recommended defaults and immutable audit scope
@@ -190,6 +192,7 @@ reviews.
 - Desktop stack: `context/desktop_app_stack.md`
 - Ordered features: `context/feature_list_in_order.md`
 - Coding standards: `context/conding_standards.md`
+- Prospect retention: `context/prospect_retention_policy.md`
 - QA validation: `context/qa_validation.md`
 - MVP acceptance: `context/mvp_acceptance.md`
 - Post-MVP backlog: `context/post_mvp_backlog.md`

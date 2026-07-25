@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DesktopBootstrap } from "../shared/contracts.js";
 import { AuditJobs } from "./audits/audit-jobs.js";
 import { ClientWorkspace } from "./clients/client-workspace.js";
+import { ProspectWorkspace } from "./prospects/prospect-workspace.js";
 import { ReportLibrary } from "./reports/report-library.js";
 
 const destinations = [
@@ -174,39 +175,6 @@ function Overview(props: { data: DesktopBootstrap }): React.JSX.Element {
   );
 }
 
-const emptyStateCopy: Record<
-  Exclude<DestinationId, "overview" | "settings">,
-  { title: string; body: string }
-> = {
-  audits: {
-    title: "No audits yet",
-    body: "Audits will appear here after a website scope is selected.",
-  },
-  clients: {
-    title: "No clients yet",
-    body: "Client records will keep websites, pages, audits, and reports together.",
-  },
-  prospects: {
-    title: "No prospects yet",
-    body: "Qualified businesses will appear here before promotion to clients.",
-  },
-  reports: {
-    title: "No reports yet",
-    body: "Generated audit and summary documents will be available here.",
-  },
-};
-
-function EmptyDestination(props: { destination: keyof typeof emptyStateCopy }): React.JSX.Element {
-  const copy = emptyStateCopy[props.destination];
-  return (
-    <section aria-labelledby="empty-title" className="section-block empty-destination">
-      <FileText aria-hidden="true" size={28} />
-      <h2 id="empty-title">{copy.title}</h2>
-      <p>{copy.body}</p>
-    </section>
-  );
-}
-
 function SettingsView(props: { data: DesktopBootstrap }): React.JSX.Element {
   return (
     <section aria-labelledby="application-title" className="section-block">
@@ -333,6 +301,7 @@ export function App(): React.JSX.Element {
           )}
           {state.type === "ready" && destination === "overview" && <Overview data={state.data} />}
           {state.type === "ready" && destination === "clients" && <ClientWorkspace />}
+          {state.type === "ready" && destination === "prospects" && <ProspectWorkspace />}
           {state.type === "ready" && destination === "audits" && (
             <section aria-labelledby="audit-jobs-title" className="section-block">
               <div className="section-heading">
@@ -358,12 +327,6 @@ export function App(): React.JSX.Element {
           {state.type === "ready" && destination === "settings" && (
             <SettingsView data={state.data} />
           )}
-          {state.type === "ready" &&
-            destination !== "overview" &&
-            destination !== "clients" &&
-            destination !== "audits" &&
-            destination !== "reports" &&
-            destination !== "settings" && <EmptyDestination destination={destination} />}
         </div>
       </main>
     </div>

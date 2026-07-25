@@ -19,20 +19,30 @@ import {
   createAuditScopeResultSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
+  deleteProspectRequestSchema,
   desktopBootstrapSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
-  getClientRequestSchema,
   getAuditScopeRequestSchema,
+  getClientRequestSchema,
+  getProspectRequestSchema,
   IPC_CHANNELS,
   pageSelectionResultSchema,
+  prospectActionResultSchema,
+  prospectListQuerySchema,
+  prospectListResultSchema,
+  prospectMutationResultSchema,
+  prospectRecordSchema,
   reportArtifactActionRequestSchema,
   reportArtifactActionResultSchema,
   reportArtifactListQuerySchema,
   reportArtifactListResultSchema,
   setClientStatusRequestSchema,
+  setProspectStateRequestSchema,
   startAuditJobRequestSchema,
+  suppressProspectRequestSchema,
   updateClientRequestSchema,
+  updateProspectRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
   type DesktopApi,
@@ -69,6 +79,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.deleteClient, request),
     );
   },
+  async deleteProspect(input) {
+    const request = deleteProspectRequestSchema.parse(input);
+    return prospectActionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.deleteProspect, request),
+    );
+  },
   async exportReport(input) {
     const request = reportArtifactActionRequestSchema.parse(input);
     return reportArtifactActionResultSchema.parse(
@@ -100,10 +116,21 @@ const desktopApi: DesktopApi = {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getClient, request);
     return result === null ? null : clientRecordSchema.parse(result);
   },
+  async getProspect(input) {
+    const request = getProspectRequestSchema.parse(input);
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getProspect, request);
+    return result === null ? null : prospectRecordSchema.parse(result);
+  },
   async listClients(input) {
     const request = clientListQuerySchema.parse(input);
     return clientListResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.listClients, request),
+    );
+  },
+  async listProspects(input) {
+    const request = prospectListQuerySchema.parse(input);
+    return prospectListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listProspects, request),
     );
   },
   async listAuditHistory(input) {
@@ -148,6 +175,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.setClientStatus, request),
     );
   },
+  async setProspectState(input) {
+    const request = setProspectStateRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.setProspectState, request),
+    );
+  },
   async retryAuditJob(input) {
     const request = auditJobIdRequestSchema.parse(input);
     return auditJobMutationResultSchema.parse(
@@ -160,10 +193,22 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.startAuditJob, request),
     );
   },
+  async suppressProspect(input) {
+    const request = suppressProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.suppressProspect, request),
+    );
+  },
   async updateClient(input) {
     const request = updateClientRequestSchema.parse(input);
     return clientMutationResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.updateClient, request),
+    );
+  },
+  async updateProspect(input) {
+    const request = updateProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.updateProspect, request),
     );
   },
 };

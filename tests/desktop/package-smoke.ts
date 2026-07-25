@@ -39,6 +39,9 @@ const auditsScreenshotPath = path.resolve("tmp", "desktop-audits.png");
 const compactAuditsScreenshotPath = path.resolve("tmp", "desktop-audits-compact.png");
 const reportsScreenshotPath = path.resolve("tmp", "desktop-reports.png");
 const compactReportsScreenshotPath = path.resolve("tmp", "desktop-reports-compact.png");
+const prospectsScreenshotPath = path.resolve("tmp", "desktop-prospects.png");
+const compactProspectsScreenshotPath = path.resolve("tmp", "desktop-prospects-compact.png");
+const prospectDetailScreenshotPath = path.resolve("tmp", "desktop-prospect-detail.png");
 
 const application = await electron.launch({
   args: [
@@ -214,6 +217,47 @@ try {
         websiteId: website.id,
       },
     });
+    const retainedUntil = new Date(observedAt.getTime() + 365 * 24 * 60 * 60 * 1_000);
+    await database.prospect.create({
+      data: {
+        activities: {
+          create: {
+            kind: "imported",
+            summary: "Prospect imported from approved-fixture",
+          },
+        },
+        businessName: "Harbour Legal Partners",
+        category: "Legal services",
+        confidence: 78,
+        country: "Pakistan",
+        duplicateReviewState: "confirmed-distinct",
+        firstDiscoveredAt: observedAt,
+        lastVerifiedAt: observedAt,
+        locality: "Karachi",
+        normalizedDomain: "harbour-legal.test",
+        normalizedWebsiteUrl: "https://harbour-legal.test/",
+        owner: "Aisha",
+        retainedUntil,
+        searchText: "harbour legal partners harbour-legal.test legal services karachi",
+        sourceRecords: {
+          create: {
+            collectedAt: observedAt,
+            fieldProvenanceJson: JSON.stringify({
+              businessName: "approved provider record",
+              websiteUrl: "approved provider record",
+            }),
+            permittedFieldsJson: JSON.stringify(["businessName", "websiteUrl", "category"]),
+            provider: "approved-fixture",
+            providerRecordId: "harbour-legal-1",
+            retainedUntil,
+            retentionPolicy: "Approved fixture retention for one year.",
+          },
+        },
+        state: "reviewing",
+        websiteAvailability: "available",
+        websiteUrl: "https://harbour-legal.test/",
+      },
+    });
   } finally {
     await database.$disconnect();
   }
@@ -247,6 +291,23 @@ try {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ fullPage: true, path: compactPageInventoryScreenshotPath });
+
+  await page.getByRole("button", { name: "Prospects" }).click();
+  await page.getByText("Harbour Legal Partners").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "prospect workspace");
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
+  });
+  await page.screenshot({ fullPage: true, path: prospectsScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: compactProspectsScreenshotPath });
+  await page.getByRole("button", { name: /Harbour Legal Partners/u }).click();
+  await page.getByRole("heading", { name: "Qualification details" }).waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "prospect detail");
+  await page.screenshot({ fullPage: true, path: prospectDetailScreenshotPath });
 
   const jobDatabase = new PrismaClient();
   await jobDatabase.$connect();
@@ -379,7 +440,7 @@ try {
   await page.screenshot({ fullPage: true, path: compactReportsScreenshotPath });
 
   process.stdout.write(
-    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactReportsScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, reportsScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
+    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactProspectsScreenshotPath, compactReportsScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, prospectDetailScreenshotPath, prospectsScreenshotPath, reportsScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
   );
 } finally {
   await application.close();

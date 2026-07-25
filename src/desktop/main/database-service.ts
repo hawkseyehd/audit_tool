@@ -22,6 +22,13 @@ import {
   type DiscoveryResult,
   type PageSelectionAction,
   type PageSelectionResult,
+  type ProspectActionResult,
+  type ProspectListQuery,
+  type ProspectListResult,
+  type ProspectMutationResult,
+  type ProspectQualificationInput,
+  type ProspectRecord,
+  type ProspectState,
   type ReportArtifactListQuery,
   type ReportArtifactListResult,
   type WebsitePageListQuery,
@@ -37,10 +44,12 @@ import { HISTORY_SCHEMA_STATEMENTS } from "./history-migrations.js";
 import { PageDiscoveryService } from "./page-discovery-service.js";
 import { PageInventoryRepository } from "./page-inventory-repository.js";
 import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
+import { PROSPECT_SCHEMA_STATEMENTS } from "./prospect-migrations.js";
+import { ProspectRepository } from "./prospect-repository.js";
 import { SCOPE_SCHEMA_STATEMENTS } from "./scope-migrations.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
@@ -51,6 +60,7 @@ export class DesktopDatabaseService {
   #history: AuditHistoryRepository | undefined;
   #jobs: AuditJobRepository | undefined;
   #pages: PageInventoryRepository | undefined;
+  #prospects: ProspectRepository | undefined;
   #scopes: AuditScopeRepository | undefined;
 
   constructor(dataDirectory: string) {
@@ -88,6 +98,9 @@ export class DesktopDatabaseService {
     for (const statement of HISTORY_SCHEMA_STATEMENTS) {
       await this.#client.$executeRawUnsafe(statement);
     }
+    for (const statement of PROSPECT_SCHEMA_STATEMENTS) {
+      await this.#client.$executeRawUnsafe(statement);
+    }
     await this.#client.discoveryRun.updateMany({
       data: {
         completedAt: new Date(),
@@ -108,6 +121,8 @@ export class DesktopDatabaseService {
     this.#scopes = new AuditScopeRepository(this.#client);
     this.#history = new AuditHistoryRepository(this.#client);
     this.#jobs = new AuditJobRepository(this.#client, path.join(this.#dataDirectory, "audits"));
+    this.#prospects = new ProspectRepository(this.#client);
+    await this.#prospects.deleteExpired();
     this.#initializedAt = metadata.createdAt.toISOString();
   }
 
@@ -122,7 +137,7 @@ export class DesktopDatabaseService {
     return workspaceSummarySchema.parse({
       audits: await this.jobs.count(),
       clients: await this.#requireClients().count(),
-      prospects: 0,
+      prospects: await this.#requireProspects().count(),
       reports: await this.history.countArtifacts(),
     });
   }
@@ -149,6 +164,34 @@ export class DesktopDatabaseService {
 
   deleteClient(id: string, confirmation: string): Promise<DeleteClientResult> {
     return this.#requireClients().delete(id, confirmation);
+  }
+
+  listProspects(query: ProspectListQuery): Promise<ProspectListResult> {
+    return this.#requireProspects().list(query);
+  }
+
+  getProspect(id: string): Promise<ProspectRecord | null> {
+    return this.#requireProspects().get(id);
+  }
+
+  updateProspect(id: string, input: ProspectQualificationInput): Promise<ProspectMutationResult> {
+    return this.#requireProspects().updateQualification(id, input);
+  }
+
+  setProspectState(id: string, state: ProspectState): Promise<ProspectMutationResult> {
+    return this.#requireProspects().setState(id, state);
+  }
+
+  suppressProspect(
+    id: string,
+    reason: string,
+    doNotContact: boolean,
+  ): Promise<ProspectMutationResult> {
+    return this.#requireProspects().suppress(id, reason, doNotContact);
+  }
+
+  deleteProspect(id: string, confirmation: string): Promise<ProspectActionResult> {
+    return this.#requireProspects().delete(id, confirmation);
   }
 
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult> {
@@ -205,6 +248,7 @@ export class DesktopDatabaseService {
     this.#history = undefined;
     this.#jobs = undefined;
     this.#pages = undefined;
+    this.#prospects = undefined;
     this.#scopes = undefined;
     if (client !== undefined) {
       await client.$disconnect();
@@ -221,6 +265,11 @@ export class DesktopDatabaseService {
   #requirePages(): PageInventoryRepository {
     if (this.#pages === undefined) throw new Error("Page inventory repository is unavailable");
     return this.#pages;
+  }
+
+  #requireProspects(): ProspectRepository {
+    if (this.#prospects === undefined) throw new Error("Prospect repository is unavailable");
+    return this.#prospects;
   }
 
   #requireDiscovery(): PageDiscoveryService {

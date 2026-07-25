@@ -11,6 +11,7 @@ A professional desktop application and CLI that crawls public business websites,
 - `context/current_feature.md`
 - `context/conding_standards.md`
 - `context/prospect_retention_policy.md`
+- `context/dataforseo_provider_policy.md`
 - `context/ai-interaction.md`
 
 Read the context files before implementing a feature. Keep the active feature documented in `context/current_feature.md`.

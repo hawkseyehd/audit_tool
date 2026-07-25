@@ -6,6 +6,7 @@ import {
   Database,
   Save,
   Search,
+  SearchCheck,
   ShieldOff,
   Trash2,
   UserSearch,
@@ -19,6 +20,7 @@ import type {
   ProspectRecord,
   ProspectState,
 } from "../../shared/contracts.js";
+import { CampaignWorkspace } from "./campaign-workspace.js";
 
 const defaultQuery: ProspectListQuery = {
   confidenceAtLeast: 0,
@@ -408,6 +410,7 @@ function ProspectDetail(props: {
 
 export function ProspectWorkspace(): React.JSX.Element {
   const [view, setView] = useState<View>({ type: "list" });
+  const [workspaceMode, setWorkspaceMode] = useState<"campaigns" | "prospects">("prospects");
   const [query, setQuery] = useState<ProspectListQuery>(defaultQuery);
   const [searchDraft, setSearchDraft] = useState("");
   const [listState, setListState] = useState<ListState>({ type: "loading" });
@@ -490,6 +493,16 @@ export function ProspectWorkspace(): React.JSX.Element {
     );
   }
 
+  if (workspaceMode === "campaigns") {
+    return (
+      <CampaignWorkspace
+        onBackToProspects={() => {
+          setWorkspaceMode("prospects");
+        }}
+      />
+    );
+  }
+
   return (
     <section
       aria-labelledby="prospect-directory-title"
@@ -500,6 +513,16 @@ export function ProspectWorkspace(): React.JSX.Element {
           <h2 id="prospect-directory-title">Prospect workspace</h2>
           <p>Discovered businesses awaiting qualification or suppression.</p>
         </div>
+        <button
+          className="button primary"
+          onClick={() => {
+            setWorkspaceMode("campaigns");
+          }}
+          type="button"
+        >
+          <SearchCheck aria-hidden="true" size={16} />
+          Find prospects
+        </button>
       </div>
 
       <div className="prospect-toolbar">

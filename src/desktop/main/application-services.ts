@@ -4,12 +4,14 @@ import type { Logger } from "pino";
 import { desktopBootstrapSchema, type DesktopBootstrap } from "../shared/contracts.js";
 import { AuditJobManager } from "./audit-job-manager.js";
 import { DesktopDatabaseService } from "./database-service.js";
+import { DiscoveryCampaignManager } from "./discovery-campaign-manager.js";
 import { ReportArtifactService } from "./report-artifact-service.js";
 import { configurePackagedBrowserEnvironment } from "./runtime-paths.js";
 import { WorkerCoordinator } from "./worker-coordinator.js";
 
 export class ApplicationServices {
   readonly #database: DesktopDatabaseService;
+  readonly #campaigns: DiscoveryCampaignManager;
   readonly #jobs: AuditJobManager;
   readonly #logger: Logger;
   readonly #dataDirectory: string;
@@ -23,6 +25,11 @@ export class ApplicationServices {
     this.#database = new DesktopDatabaseService(options.dataDirectory);
     this.#logger = options.logger;
     this.#worker = new WorkerCoordinator(options.logger);
+    this.#campaigns = new DiscoveryCampaignManager({
+      database: this.#database,
+      logger: options.logger,
+      worker: this.#worker,
+    });
     this.#jobs = new AuditJobManager({
       dataDirectory: options.dataDirectory,
       database: this.#database,
@@ -80,6 +87,10 @@ export class ApplicationServices {
     return this.#database;
   }
 
+  get campaigns(): DiscoveryCampaignManager {
+    return this.#campaigns;
+  }
+
   get jobs(): AuditJobManager {
     return this.#jobs;
   }
@@ -90,6 +101,7 @@ export class ApplicationServices {
   }
 
   async close(): Promise<void> {
+    await this.#campaigns.stop();
     await this.#jobs.stop();
     await this.#worker.stop();
     this.#reports = undefined;

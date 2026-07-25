@@ -20,6 +20,8 @@ import {
   type DeleteClientResult,
   type DesktopBootstrap,
   type DiscoveryResult,
+  type DiscoveryCampaignListQuery,
+  type DiscoveryCampaignListResult,
   type PageSelectionAction,
   type PageSelectionResult,
   type ProspectActionResult,
@@ -44,16 +46,17 @@ import { HISTORY_SCHEMA_STATEMENTS } from "./history-migrations.js";
 import { PageDiscoveryService } from "./page-discovery-service.js";
 import { PageInventoryRepository } from "./page-inventory-repository.js";
 import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
-import { PROSPECT_SCHEMA_STATEMENTS } from "./prospect-migrations.js";
-import { ProspectRepository } from "./prospect-repository.js";
+import { CAMPAIGN_SCHEMA_COLUMNS, PROSPECT_SCHEMA_STATEMENTS } from "./prospect-migrations.js";
+import { DiscoveryCampaignRepository, ProspectRepository } from "./prospect-repository.js";
 import { SCOPE_SCHEMA_STATEMENTS } from "./scope-migrations.js";
 
 const WORKSPACE_ID = "workspace";
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 export class DesktopDatabaseService {
   readonly #dataDirectory: string;
   #client: PrismaClient | undefined;
+  #campaigns: DiscoveryCampaignRepository | undefined;
   #clients: ClientRepository | undefined;
   #discovery: PageDiscoveryService | undefined;
   #initializedAt: string | undefined;
@@ -101,6 +104,17 @@ export class DesktopDatabaseService {
     for (const statement of PROSPECT_SCHEMA_STATEMENTS) {
       await this.#client.$executeRawUnsafe(statement);
     }
+    const campaignColumns = await this.#client.$queryRawUnsafe<{ name: string }[]>(
+      'PRAGMA table_info("DiscoveryCampaign")',
+    );
+    const existingCampaignColumns = new Set(campaignColumns.map((column) => column.name));
+    for (const column of CAMPAIGN_SCHEMA_COLUMNS) {
+      if (!existingCampaignColumns.has(column.name)) {
+        await this.#client.$executeRawUnsafe(
+          `ALTER TABLE "DiscoveryCampaign" ADD COLUMN ${column.definition}`,
+        );
+      }
+    }
     await this.#client.discoveryRun.updateMany({
       data: {
         completedAt: new Date(),
@@ -116,12 +130,14 @@ export class DesktopDatabaseService {
       where: { id: WORKSPACE_ID },
     });
     this.#clients = new ClientRepository(this.#client);
+    this.#campaigns = new DiscoveryCampaignRepository(this.#client);
     this.#pages = new PageInventoryRepository(this.#client);
     this.#discovery = new PageDiscoveryService(this.#pages);
     this.#scopes = new AuditScopeRepository(this.#client);
     this.#history = new AuditHistoryRepository(this.#client);
     this.#jobs = new AuditJobRepository(this.#client, path.join(this.#dataDirectory, "audits"));
     this.#prospects = new ProspectRepository(this.#client);
+    await this.#campaigns.markInterrupted();
     await this.#prospects.deleteExpired();
     this.#initializedAt = metadata.createdAt.toISOString();
   }
@@ -168,6 +184,10 @@ export class DesktopDatabaseService {
 
   listProspects(query: ProspectListQuery): Promise<ProspectListResult> {
     return this.#requireProspects().list(query);
+  }
+
+  listDiscoveryCampaigns(query: DiscoveryCampaignListQuery): Promise<DiscoveryCampaignListResult> {
+    return this.campaigns.list(query);
   }
 
   getProspect(id: string): Promise<ProspectRecord | null> {
@@ -227,6 +247,17 @@ export class DesktopDatabaseService {
     return this.#jobs;
   }
 
+  get campaigns(): DiscoveryCampaignRepository {
+    if (this.#campaigns === undefined) {
+      throw new Error("Discovery campaign repository is unavailable");
+    }
+    return this.#campaigns;
+  }
+
+  get prospects(): ProspectRepository {
+    return this.#requireProspects();
+  }
+
   get history(): AuditHistoryRepository {
     if (this.#history === undefined) throw new Error("Audit history repository is unavailable");
     return this.#history;
@@ -244,6 +275,7 @@ export class DesktopDatabaseService {
     const client = this.#client;
     this.#client = undefined;
     this.#clients = undefined;
+    this.#campaigns = undefined;
     this.#discovery = undefined;
     this.#history = undefined;
     this.#jobs = undefined;

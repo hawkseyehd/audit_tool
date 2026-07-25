@@ -8,6 +8,8 @@ export const PROSPECT_SCHEMA_STATEMENTS = [
     "country" TEXT NOT NULL,
     "region" TEXT,
     "locality" TEXT,
+    "latitude" REAL,
+    "longitude" REAL,
     "radiusKm" REAL,
     "category" TEXT,
     "keywordsJson" TEXT NOT NULL DEFAULT '[]',
@@ -17,6 +19,10 @@ export const PROSPECT_SCHEMA_STATEMENTS = [
     "exclusionRulesJson" TEXT NOT NULL DEFAULT '[]',
     "continuationDataJson" TEXT,
     "resultCount" INTEGER NOT NULL DEFAULT 0,
+    "processedCount" INTEGER NOT NULL DEFAULT 0,
+    "suppressedCount" INTEGER NOT NULL DEFAULT 0,
+    "providerRequestCount" INTEGER NOT NULL DEFAULT 0,
+    "warningMessage" TEXT,
     "failureMessage" TEXT,
     "startedAt" DATETIME,
     "completedAt" DATETIME,
@@ -123,4 +129,16 @@ export const PROSPECT_SCHEMA_STATEMENTS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "SuppressionRecord_matchKey_key" ON "SuppressionRecord"("matchKey")`,
   `CREATE INDEX IF NOT EXISTS "SuppressionRecord_expiresAt_idx" ON "SuppressionRecord"("expiresAt")`,
   `CREATE INDEX IF NOT EXISTS "SuppressionRecord_sourceProspectId_idx" ON "SuppressionRecord"("sourceProspectId")`,
+] as const;
+
+export const CAMPAIGN_SCHEMA_COLUMNS = [
+  { definition: '"latitude" REAL', name: "latitude" },
+  { definition: '"longitude" REAL', name: "longitude" },
+  { definition: '"processedCount" INTEGER NOT NULL DEFAULT 0', name: "processedCount" },
+  { definition: '"suppressedCount" INTEGER NOT NULL DEFAULT 0', name: "suppressedCount" },
+  {
+    definition: '"providerRequestCount" INTEGER NOT NULL DEFAULT 0',
+    name: "providerRequestCount",
+  },
+  { definition: '"warningMessage" TEXT', name: "warningMessage" },
 ] as const;

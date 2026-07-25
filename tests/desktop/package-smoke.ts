@@ -42,6 +42,10 @@ const compactReportsScreenshotPath = path.resolve("tmp", "desktop-reports-compac
 const prospectsScreenshotPath = path.resolve("tmp", "desktop-prospects.png");
 const compactProspectsScreenshotPath = path.resolve("tmp", "desktop-prospects-compact.png");
 const prospectDetailScreenshotPath = path.resolve("tmp", "desktop-prospect-detail.png");
+const campaignsScreenshotPath = path.resolve("tmp", "desktop-campaigns.png");
+const compactCampaignsScreenshotPath = path.resolve("tmp", "desktop-campaigns-compact.png");
+const campaignFormScreenshotPath = path.resolve("tmp", "desktop-campaign-form.png");
+const compactCampaignFormScreenshotPath = path.resolve("tmp", "desktop-campaign-form-compact.png");
 
 const application = await electron.launch({
   args: [
@@ -258,6 +262,30 @@ try {
         websiteUrl: "https://harbour-legal.test/",
       },
     });
+    await database.discoveryCampaign.create({
+      data: {
+        category: "dental_clinic",
+        completedAt: observedAt,
+        country: "PK",
+        exclusionRulesJson: JSON.stringify(["Existing clients"]),
+        keywordsJson: JSON.stringify(["dentist", "orthodontist"]),
+        locality: "Karachi",
+        maxResults: 100,
+        name: "Karachi dental practices",
+        processedCount: 100,
+        provider: "dataforseo-business-listings",
+        providerRequestCount: 1,
+        providerTermsVersion: "reviewed-2026-07-25",
+        region: "Sindh",
+        requireWebsite: true,
+        requiredFieldsJson: JSON.stringify(["businessName", "websiteUrl"]),
+        resultCount: 82,
+        startedAt: new Date(observedAt.getTime() - 30_000),
+        state: "completed",
+        suppressedCount: 4,
+        warningMessage: "14 records did not contain all required fields.",
+      },
+    });
   } finally {
     await database.$disconnect();
   }
@@ -304,6 +332,34 @@ try {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ fullPage: true, path: compactProspectsScreenshotPath });
+  await page.getByRole("button", { name: "Find prospects" }).click();
+  await page.getByText("Karachi dental practices").waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "discovery campaigns");
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: campaignsScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: compactCampaignsScreenshotPath });
+  await page.getByRole("button", { name: "New campaign" }).click();
+  await page.getByRole("heading", { name: "New discovery campaign" }).waitFor();
+  await assertNoSeriousAccessibilityViolations(page, "campaign creation");
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(1280, 820);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: campaignFormScreenshotPath });
+  await application.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ fullPage: true, path: compactCampaignFormScreenshotPath });
+  await page.getByRole("button", { name: "Back to campaigns" }).click();
+  await page.getByRole("button", { name: "Back to prospects" }).click();
   await page.getByRole("button", { name: /Harbour Legal Partners/u }).click();
   await page.getByRole("heading", { name: "Qualification details" }).waitFor();
   await assertNoSeriousAccessibilityViolations(page, "prospect detail");
@@ -440,7 +496,7 @@ try {
   await page.screenshot({ fullPage: true, path: compactReportsScreenshotPath });
 
   process.stdout.write(
-    `${JSON.stringify({ auditsScreenshotPath, bootstrap, clientScreenshotPath, compactAuditsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactProspectsScreenshotPath, compactReportsScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, prospectDetailScreenshotPath, prospectsScreenshotPath, reportsScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
+    `${JSON.stringify({ auditsScreenshotPath, bootstrap, campaignFormScreenshotPath, campaignsScreenshotPath, clientScreenshotPath, compactAuditsScreenshotPath, compactCampaignFormScreenshotPath, compactCampaignsScreenshotPath, compactClientScreenshotPath, compactPageInventoryScreenshotPath, compactProspectsScreenshotPath, compactReportsScreenshotPath, compactScreenshotPath, pageInventoryScreenshotPath, prospectDetailScreenshotPath, prospectsScreenshotPath, reportsScreenshotPath, screenshotPath, smokeTarget, usesPackagedApplication })}\n`,
   );
 } finally {
   await application.close();

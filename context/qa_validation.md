@@ -230,6 +230,29 @@ The complete Feature 29 regression gate passed 276 tests across 60 files. Format
 zero-warning linting, strict CLI and desktop type checking, Prisma schema validation, the CLI
 production build, Windows x64 Electron packaging, and the packaged ASAR smoke test passed.
 
+## Discovery Campaign Validation
+
+Feature 30 adds an approved DataForSEO Business Listings adapter and durable campaign execution.
+Provider tests verify outbound criteria, Basic authentication without plaintext credential
+exposure, response validation, approved-field minimization, website and exclusion filtering,
+continuation, and bounded retry behavior. Campaign tests verify credentials are required before a
+paid campaign is created, provider pages execute through the utility worker, progress is persisted
+after import, source provenance is retained, and completed records appear in the prospect
+workspace.
+
+Renderer tests cover campaign creation, country and category criteria, result limits, progress,
+import and suppression counts, cancellation, provider readiness, and paid-operation states. The
+packaged Electron application rendered campaign history and creation at 1280 x 820 and 900 x 700.
+Full-page captures were inspected at full resolution. Controls, warnings, table hierarchy,
+responsive form layout, disabled credential state, and keyboard-focusable overflow regions were
+clear with no overlap or clipping. Automated axe scans passed, and the Impeccable detector
+returned no findings.
+
+The stable Feature 30 regression gate passed 282 tests across 62 files. Formatting, zero-warning
+linting, strict CLI and desktop type checking, Prisma schema validation, the CLI production build,
+Windows x64 Electron packaging, and the packaged ASAR smoke test passed. No paid live provider
+request was made during automated validation; deterministic provider responses are used in tests.
+
 ## Failure and Cleanup Evidence
 
 - Individual crawl page failures remain in `scannedPages` while the crawl continues.

@@ -278,6 +278,8 @@ model DiscoveryCampaign {
   country              String
   region               String?
   locality             String?
+  latitude             Float?
+  longitude            Float?
   radiusKm             Float?
   category             String?
   keywordsJson         String                  @default("[]")
@@ -287,6 +289,10 @@ model DiscoveryCampaign {
   exclusionRulesJson   String                  @default("[]")
   continuationDataJson String?
   resultCount          Int                     @default(0)
+  processedCount       Int                     @default(0)
+  suppressedCount      Int                     @default(0)
+  providerRequestCount Int                     @default(0)
+  warningMessage       String?
   failureMessage       String?
   startedAt            DateTime?
   completedAt          DateTime?

@@ -7,9 +7,51 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProspectWorkspace } from "../../src/desktop/renderer/prospects/prospect-workspace.js";
 import type {
   DesktopApi,
+  DiscoveryCampaignRecord,
   ProspectListResult,
   ProspectRecord,
 } from "../../src/desktop/shared/contracts.js";
+
+const provider = {
+  configured: true,
+  credentialEnvironmentVariables: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"] as const,
+  id: "dataforseo-business-listings" as const,
+  label: "DataForSEO Business Listings" as const,
+  maxResults: 5_000 as const,
+  paidOperation: true as const,
+  supportsRadius: true as const,
+  termsVersion: "reviewed-2026-07-25" as const,
+};
+
+const campaign: DiscoveryCampaignRecord = {
+  category: "dental_clinic",
+  completedAt: null,
+  country: "PK",
+  createdAt: "2026-07-25T12:00:00.000Z",
+  exclusionRules: [],
+  failureMessage: null,
+  hasContinuation: false,
+  id: "78c4439a-30fd-42b7-b742-28d5b6f66783",
+  keywords: [],
+  latitude: null,
+  locality: "Karachi",
+  longitude: null,
+  maxResults: 100,
+  name: "Karachi dental practices",
+  processedCount: 25,
+  provider: "dataforseo-business-listings",
+  providerRequestCount: 1,
+  radiusKm: null,
+  region: "Sindh",
+  requireWebsite: true,
+  requiredFields: ["businessName", "websiteUrl"],
+  resultCount: 22,
+  startedAt: "2026-07-25T12:00:02.000Z",
+  state: "running",
+  suppressedCount: 3,
+  updatedAt: "2026-07-25T12:00:04.000Z",
+  warningMessage: null,
+};
 
 const prospect: ProspectRecord = {
   activities: [
@@ -88,8 +130,10 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
   const api: DesktopApi = {
     applyPageSelection: vi.fn(),
     cancelAuditJob: vi.fn(),
+    cancelDiscoveryCampaign: vi.fn(),
     createAuditScope: vi.fn(),
     createClient: vi.fn(),
+    createDiscoveryCampaign: vi.fn(),
     deleteClient: vi.fn(),
     deleteProspect: vi.fn().mockResolvedValue({ ok: true }),
     discoverWebsitePages: vi.fn(),
@@ -98,16 +142,19 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     getAuditScope: vi.fn(),
     getBootstrap: vi.fn(),
     getClient: vi.fn(),
+    getDiscoveryProvider: vi.fn(),
     getProspect: vi.fn().mockResolvedValue(prospect),
     listAuditHistory: vi.fn(),
     listAuditJobs: vi.fn(),
     listClients: vi.fn(),
+    listDiscoveryCampaigns: vi.fn(),
     listProspects: vi.fn().mockResolvedValue(listResult),
     listReportArtifacts: vi.fn(),
     listWebsitePages: vi.fn(),
     openReport: vi.fn(),
     revealReport: vi.fn(),
     retryAuditJob: vi.fn(),
+    resumeDiscoveryCampaign: vi.fn(),
     setClientStatus: vi.fn(),
     setProspectState: vi.fn().mockResolvedValue({
       ok: true,
@@ -206,5 +253,60 @@ describe("ProspectWorkspace", () => {
         reason: "Business requested removal",
       });
     });
+  });
+
+  it("creates a bounded paid discovery campaign from the prospect workspace", async () => {
+    const createDiscoveryCampaign = vi
+      .fn<DesktopApi["createDiscoveryCampaign"]>()
+      .mockResolvedValue({ campaign: { ...campaign, state: "queued" }, ok: true });
+    installApi({
+      createDiscoveryCampaign,
+      getDiscoveryProvider: vi.fn().mockResolvedValue(provider),
+      listDiscoveryCampaigns: vi
+        .fn()
+        .mockResolvedValue({ items: [], page: 1, pageSize: 10, total: 0 }),
+    });
+    const user = userEvent.setup();
+    render(<ProspectWorkspace />);
+
+    await user.click(screen.getByRole("button", { name: "Find prospects" }));
+    expect(await screen.findByRole("heading", { name: "Discovery campaigns" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "New campaign" }));
+    await user.type(screen.getByLabelText("Campaign name *"), campaign.name);
+    await user.type(screen.getByLabelText("Country code *"), "PK");
+    await user.type(screen.getByLabelText("City or locality"), "Karachi");
+    await user.type(screen.getByLabelText("Category"), "dental_clinic");
+    await user.click(screen.getByRole("button", { name: "Start discovery" }));
+
+    await waitFor(() => {
+      expect(createDiscoveryCampaign.mock.calls[0]?.[0].input).toMatchObject({
+        country: "PK",
+        locality: "Karachi",
+        maxResults: 100,
+        provider: "dataforseo-business-listings",
+      });
+    });
+  });
+
+  it("shows live campaign progress and supports explicit cancellation", async () => {
+    const cancelDiscoveryCampaign = vi
+      .fn<DesktopApi["cancelDiscoveryCampaign"]>()
+      .mockResolvedValue({ campaign: { ...campaign, state: "cancelled" }, ok: true });
+    installApi({
+      cancelDiscoveryCampaign,
+      getDiscoveryProvider: vi.fn().mockResolvedValue(provider),
+      listDiscoveryCampaigns: vi
+        .fn()
+        .mockResolvedValue({ items: [campaign], page: 1, pageSize: 10, total: 1 }),
+    });
+    const user = userEvent.setup();
+    render(<ProspectWorkspace />);
+
+    await user.click(screen.getByRole("button", { name: "Find prospects" }));
+    expect(await screen.findByText("Karachi dental practices")).toBeTruthy();
+    expect(screen.getByText("25 / 100")).toBeTruthy();
+    expect(screen.getByText("3 suppressed")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: `Cancel ${campaign.name}` }));
+    expect(cancelDiscoveryCampaign).toHaveBeenCalledWith({ id: campaign.id });
   });
 });

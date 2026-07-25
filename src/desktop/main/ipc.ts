@@ -17,11 +17,17 @@ import {
   clientRecordSchema,
   createAuditScopeRequestSchema,
   createAuditScopeResultSchema,
+  createDiscoveryCampaignRequestSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
   deleteProspectRequestSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
+  discoveryCampaignIdRequestSchema,
+  discoveryCampaignListQuerySchema,
+  discoveryCampaignListResultSchema,
+  discoveryCampaignMutationResultSchema,
+  discoveryProviderSchema,
   getAuditScopeRequestSchema,
   getClientRequestSchema,
   getProspectRequestSchema,
@@ -142,6 +148,37 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     return prospectActionResultSchema.parse(
       await services.database.deleteProspect(request.id, request.confirmation),
     );
+  });
+  ipcMain.handle(IPC_CHANNELS.getDiscoveryProvider, (event, ...arguments_: unknown[]) => {
+    assertTrustedSender(event, window);
+    if (arguments_.length !== 0) {
+      throw new Error("Discovery provider request does not accept arguments");
+    }
+    return discoveryProviderSchema.parse(services.campaigns.provider());
+  });
+  ipcMain.handle(IPC_CHANNELS.listDiscoveryCampaigns, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const query = discoveryCampaignListQuerySchema.parse(input);
+    return discoveryCampaignListResultSchema.parse(
+      await services.database.listDiscoveryCampaigns(query),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.createDiscoveryCampaign, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = createDiscoveryCampaignRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(
+      await services.campaigns.create(request.input),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.cancelDiscoveryCampaign, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = discoveryCampaignIdRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(await services.campaigns.cancel(request.id));
+  });
+  ipcMain.handle(IPC_CHANNELS.resumeDiscoveryCampaign, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = discoveryCampaignIdRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(await services.campaigns.resume(request.id));
   });
   ipcMain.handle(IPC_CHANNELS.listWebsitePages, async (event, input: unknown) => {
     assertTrustedSender(event, window);

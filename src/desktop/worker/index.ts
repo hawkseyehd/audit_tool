@@ -1,5 +1,6 @@
 import { runAuditOrchestration } from "../../core/audit-orchestrator.js";
 import { crawlWebsite } from "../../crawler/crawler.js";
+import { searchDataForSeoBusinesses } from "../../discovery/dataforseo-provider.js";
 import {
   workerRequestSchema,
   type WorkerRequest,
@@ -10,8 +11,9 @@ const parentPort = process.parentPort;
 let active:
   | {
       controller: AbortController;
-      jobId: string;
+      operationId: string;
       promise: Promise<void>;
+      type: "audit" | "discovery";
     }
   | undefined;
 
@@ -25,7 +27,15 @@ parentPort.on("message", (event) => {
     return;
   }
   if (request.type === "cancel-audit") {
-    if (active?.jobId === request.jobId) active.controller.abort(new Error("Audit cancelled"));
+    if (active?.type === "audit" && active.operationId === request.jobId) {
+      active.controller.abort(new Error("Audit cancelled"));
+    }
+    return;
+  }
+  if (request.type === "cancel-discovery") {
+    if (active?.type === "discovery" && active.operationId === request.campaignId) {
+      active.controller.abort(new Error("Discovery cancelled"));
+    }
     return;
   }
   if (request.type === "shutdown") {
@@ -33,21 +43,33 @@ parentPort.on("message", (event) => {
     return;
   }
   if (active !== undefined) {
-    post({
-      code: "worker-busy",
-      id: request.id,
-      jobId: request.jobId,
-      message: "The audit worker is already processing another job.",
-      type: "audit-failed",
-    });
+    if (request.type === "run-audit") {
+      post({
+        code: "worker-busy",
+        id: request.id,
+        jobId: request.jobId,
+        message: "The desktop worker is already processing another job.",
+        type: "audit-failed",
+      });
+    } else {
+      post({
+        campaignId: request.campaignId,
+        code: "worker-busy",
+        id: request.id,
+        message: "The desktop worker is already processing another job.",
+        type: "discovery-failed",
+      });
+    }
     return;
   }
 
   const controller = new AbortController();
-  const promise = runAudit(request, controller);
-  active = { controller, jobId: request.jobId, promise };
+  const isAudit = request.type === "run-audit";
+  const operationId = isAudit ? request.jobId : request.campaignId;
+  const promise = isAudit ? runAudit(request, controller) : runDiscoveryPage(request, controller);
+  active = { controller, operationId, promise, type: isAudit ? "audit" : "discovery" };
   void promise.finally(() => {
-    if (active?.jobId === request.jobId) active = undefined;
+    if (active?.operationId === operationId) active = undefined;
   });
 });
 
@@ -110,6 +132,39 @@ async function runAudit(
       jobId: request.jobId,
       message: safeMessage(error),
       type: "audit-failed",
+    });
+  }
+}
+
+async function runDiscoveryPage(
+  request: Extract<WorkerRequest, { type: "run-discovery-page" }>,
+  controller: AbortController,
+): Promise<void> {
+  try {
+    const page = await searchDataForSeoBusinesses(request.input, {
+      signal: controller.signal,
+    });
+    post({
+      campaignId: request.campaignId,
+      id: request.id,
+      page,
+      type: "discovery-page-completed",
+    });
+  } catch (error: unknown) {
+    if (controller.signal.aborted) {
+      post({
+        campaignId: request.campaignId,
+        id: request.id,
+        type: "discovery-cancelled",
+      });
+      return;
+    }
+    post({
+      campaignId: request.campaignId,
+      code: error instanceof Error ? error.name : "discovery-failed",
+      id: request.id,
+      message: safeMessage(error),
+      type: "discovery-failed",
     });
   }
 }

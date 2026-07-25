@@ -5,7 +5,9 @@ import { PAGE_TYPES, findingCountsSchema, pageTypeSchema } from "../../core/sche
 export const IPC_CHANNELS = {
   applyPageSelection: "desktop:pages:select",
   cancelAuditJob: "desktop:audits:cancel",
+  cancelDiscoveryCampaign: "desktop:campaigns:cancel",
   createClient: "desktop:clients:create",
+  createDiscoveryCampaign: "desktop:campaigns:create",
   createAuditScope: "desktop:scopes:create",
   deleteClient: "desktop:clients:delete",
   discoverWebsitePages: "desktop:pages:discover",
@@ -14,15 +16,18 @@ export const IPC_CHANNELS = {
   getBootstrap: "desktop:get-bootstrap",
   getAuditScope: "desktop:scopes:get",
   getClient: "desktop:clients:get",
+  getDiscoveryProvider: "desktop:campaigns:provider",
   listAuditJobs: "desktop:audits:list",
   listAuditHistory: "desktop:audit-history:list",
   listClients: "desktop:clients:list",
+  listDiscoveryCampaigns: "desktop:campaigns:list",
   listProspects: "desktop:prospects:list",
   listReportArtifacts: "desktop:reports:list",
   listWebsitePages: "desktop:pages:list",
   openReport: "desktop:reports:open",
   revealReport: "desktop:reports:reveal",
   retryAuditJob: "desktop:audits:retry",
+  resumeDiscoveryCampaign: "desktop:campaigns:resume",
   deleteProspect: "desktop:prospects:delete",
   getProspect: "desktop:prospects:get",
   setProspectState: "desktop:prospects:set-state",
@@ -196,7 +201,9 @@ export const campaignInputSchema = z
     country: z.string().trim().min(1).max(100),
     exclusionRules: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
     keywords: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+    latitude: z.number().min(-90).max(90).optional(),
     locality: optionalText(120),
+    longitude: z.number().min(-180).max(180).optional(),
     maxResults: z.number().int().min(1).max(5_000),
     name: z.string().trim().min(1).max(200),
     provider: z.string().trim().min(1).max(100),
@@ -206,7 +213,140 @@ export const campaignInputSchema = z
     requireWebsite: z.boolean().default(true),
     requiredFields: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
   })
+  .superRefine((input, context) => {
+    const hasLatitude = input.latitude !== undefined;
+    const hasLongitude = input.longitude !== undefined;
+    if (hasLatitude !== hasLongitude) {
+      context.addIssue({
+        code: "custom",
+        message: "Latitude and longitude must be provided together",
+        path: hasLatitude ? ["longitude"] : ["latitude"],
+      });
+    }
+    if (input.radiusKm !== undefined && (!hasLatitude || !hasLongitude)) {
+      context.addIssue({
+        code: "custom",
+        message: "Radius requires latitude and longitude",
+        path: ["radiusKm"],
+      });
+    }
+  });
+
+export const discoveryCampaignInputSchema = campaignInputSchema
+  .safeExtend({
+    country: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{2}$/u, "Enter a two-letter country code")
+      .transform((value) => value.toUpperCase()),
+    maxResults: z.number().int().min(1).max(5_000),
+    provider: z.literal("dataforseo-business-listings"),
+    providerTermsVersion: z.literal("reviewed-2026-07-25"),
+    requiredFields: z
+      .array(z.enum(["businessName", "websiteUrl", "publicPhone", "addressLine"]))
+      .max(4)
+      .default([]),
+  })
+  .superRefine((input, context) => {
+    if (input.category === undefined && input.keywords.length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Enter a category or at least one keyword",
+        path: ["category"],
+      });
+    }
+  });
+
+export const discoveryCampaignRecordSchema = z
+  .object({
+    category: z.string().nullable(),
+    completedAt: z.iso.datetime().nullable(),
+    country: z.string().trim().min(1).max(100),
+    createdAt: z.iso.datetime(),
+    exclusionRules: z.array(z.string().trim().min(1).max(200)).max(20),
+    failureMessage: z.string().nullable(),
+    hasContinuation: z.boolean(),
+    id: campaignIdSchema,
+    keywords: z.array(z.string().trim().min(1).max(100)).max(20),
+    latitude: z.number().nullable(),
+    locality: z.string().nullable(),
+    longitude: z.number().nullable(),
+    maxResults: z.number().int().min(1).max(5_000),
+    name: z.string().trim().min(1).max(200),
+    processedCount: z.number().int().nonnegative(),
+    provider: z.string().trim().min(1).max(100),
+    providerRequestCount: z.number().int().nonnegative(),
+    radiusKm: z.number().positive().nullable(),
+    region: z.string().nullable(),
+    requireWebsite: z.boolean(),
+    requiredFields: z.array(z.string().trim().min(1).max(100)).max(30),
+    resultCount: z.number().int().nonnegative(),
+    startedAt: z.iso.datetime().nullable(),
+    state: campaignStateSchema,
+    suppressedCount: z.number().int().nonnegative(),
+    updatedAt: z.iso.datetime(),
+    warningMessage: z.string().nullable(),
+  })
   .strict();
+
+export const discoveryCampaignListQuerySchema = z
+  .object({
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(5).max(50).default(10),
+    state: z.union([campaignStateSchema, z.literal("all")]).default("all"),
+  })
+  .strict();
+
+export const discoveryCampaignListResultSchema = z
+  .object({
+    items: z.array(discoveryCampaignRecordSchema),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const discoveryProviderSchema = z
+  .object({
+    configured: z.boolean(),
+    credentialEnvironmentVariables: z.tuple([
+      z.literal("DATAFORSEO_LOGIN"),
+      z.literal("DATAFORSEO_PASSWORD"),
+    ]),
+    id: z.literal("dataforseo-business-listings"),
+    label: z.literal("DataForSEO Business Listings"),
+    maxResults: z.literal(5_000),
+    paidOperation: z.literal(true),
+    supportsRadius: z.boolean(),
+    termsVersion: z.literal("reviewed-2026-07-25"),
+  })
+  .strict();
+
+export const discoveryCampaignMutationResultSchema = z.discriminatedUnion("ok", [
+  z.object({ campaign: discoveryCampaignRecordSchema, ok: z.literal(true) }).strict(),
+  z
+    .object({
+      error: z
+        .object({
+          code: z.enum([
+            "already-running",
+            "invalid-state",
+            "not-configured",
+            "not-found",
+            "worker-unavailable",
+          ]),
+          message: z.string().trim().min(1).max(500),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
+export const createDiscoveryCampaignRequestSchema = z
+  .object({ input: discoveryCampaignInputSchema })
+  .strict();
+export const discoveryCampaignIdRequestSchema = z.object({ id: campaignIdSchema }).strict();
 
 export const prospectSourceInputSchema = z
   .object({
@@ -943,6 +1083,12 @@ export type ClientStatus = z.infer<typeof clientStatusSchema>;
 export type DeleteClientResult = z.infer<typeof deleteClientResultSchema>;
 export type CampaignInput = z.infer<typeof campaignInputSchema>;
 export type CampaignState = z.infer<typeof campaignStateSchema>;
+export type DiscoveryCampaignInput = z.infer<typeof discoveryCampaignInputSchema>;
+export type DiscoveryCampaignListQuery = z.infer<typeof discoveryCampaignListQuerySchema>;
+export type DiscoveryCampaignListResult = z.infer<typeof discoveryCampaignListResultSchema>;
+export type DiscoveryCampaignMutationResult = z.infer<typeof discoveryCampaignMutationResultSchema>;
+export type DiscoveryCampaignRecord = z.infer<typeof discoveryCampaignRecordSchema>;
+export type DiscoveryProvider = z.infer<typeof discoveryProviderSchema>;
 export type ProspectActionResult = z.infer<typeof prospectActionResultSchema>;
 export type ProspectImportResult = z.infer<typeof prospectImportResultSchema>;
 export type ProspectListQuery = z.infer<typeof prospectListQuerySchema>;
@@ -988,7 +1134,13 @@ export interface DesktopApi {
     request: z.infer<typeof applyPageSelectionRequestSchema>,
   ): Promise<PageSelectionResult>;
   cancelAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
+  cancelDiscoveryCampaign(
+    request: z.infer<typeof discoveryCampaignIdRequestSchema>,
+  ): Promise<DiscoveryCampaignMutationResult>;
   createClient(input: ClientInput): Promise<ClientMutationResult>;
+  createDiscoveryCampaign(
+    request: z.infer<typeof createDiscoveryCampaignRequestSchema>,
+  ): Promise<DiscoveryCampaignMutationResult>;
   createAuditScope(
     request: z.infer<typeof createAuditScopeRequestSchema>,
   ): Promise<CreateAuditScopeResult>;
@@ -1008,10 +1160,12 @@ export interface DesktopApi {
   ): Promise<AuditScopeRecord | null>;
   getAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobRecord | null>;
   getClient(request: z.infer<typeof getClientRequestSchema>): Promise<ClientRecord | null>;
+  getDiscoveryProvider(): Promise<DiscoveryProvider>;
   getProspect(request: z.infer<typeof getProspectRequestSchema>): Promise<ProspectRecord | null>;
   listAuditHistory(query: AuditHistoryListQuery): Promise<AuditHistoryListResult>;
   listAuditJobs(query: AuditJobListQuery): Promise<AuditJobListResult>;
   listClients(query: ClientListQuery): Promise<ClientListResult>;
+  listDiscoveryCampaigns(query: DiscoveryCampaignListQuery): Promise<DiscoveryCampaignListResult>;
   listProspects(query: ProspectListQuery): Promise<ProspectListResult>;
   listReportArtifacts(query: ReportArtifactListQuery): Promise<ReportArtifactListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;
@@ -1022,6 +1176,9 @@ export interface DesktopApi {
     request: z.infer<typeof reportArtifactActionRequestSchema>,
   ): Promise<ReportArtifactActionResult>;
   retryAuditJob(request: z.infer<typeof auditJobIdRequestSchema>): Promise<AuditJobMutationResult>;
+  resumeDiscoveryCampaign(
+    request: z.infer<typeof discoveryCampaignIdRequestSchema>,
+  ): Promise<DiscoveryCampaignMutationResult>;
   setProspectState(
     request: z.infer<typeof setProspectStateRequestSchema>,
   ): Promise<ProspectMutationResult>;

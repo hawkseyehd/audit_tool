@@ -1,4 +1,4 @@
-# Current Feature: Prospect Data Foundation
+# Current Feature: Discovery Campaigns and Provider Adapters
 
 ## Status
 
@@ -6,64 +6,68 @@ Complete
 
 ## Branch
 
-`feature/prospect-data-foundation`
+`feature/discovery-campaigns`
 
 ## Feature
 
-Feature 29 from `context/feature_list_in_order.md`.
+Feature 30 from `context/feature_list_in_order.md`.
 
 ## Objective
 
-Establish a separate, provenance-aware prospect and campaign data model, then provide a
-searchable desktop prospect workspace with lifecycle, qualification, suppression, deletion, and
-provider-defined retention controls.
+Let a user create, execute, monitor, cancel, and safely resume a bounded business-discovery
+campaign through the approved DataForSEO Business Listings API, then import permitted public
+records into the separate prospect workspace with complete provenance.
 
 ## Included Scope
 
-- Add durable Prospect, DiscoveryCampaign, DiscoverySourceRecord, ProspectTag,
-  ProspectActivity, and SuppressionRecord models and runtime migrations.
-- Store campaign criteria, limits, lifecycle state, provider, continuation, and failure metadata
-  without executing provider requests.
-- Store prospect ownership, tags, notes, confidence, public business fields, website availability,
-  verification timestamps, duplicate-review state, source provenance, and retention deadlines.
-- Reject source imports that match durable domain or provider-record suppression keys.
-- Support new, reviewing, qualified, not-qualified, promoted, and suppressed lifecycle states.
-- Support editable qualification metadata, suppression with optional do-not-contact status,
-  exact-name-confirmed deletion, and expiry cleanup that preserves promoted provenance.
-- Add database-backed search, lifecycle, website-availability, confidence, owner, sorting, and
-  pagination controls.
-- Add sender-validated IPC and a narrow preload API for prospect operations.
-- Build and visually verify an Impeccable prospect table, detail editor, activity history,
-  destructive controls, and loading, empty, error, and disabled states.
+- Add validated campaign creation for country, region, locality, category, keywords, optional
+  coordinate radius, result limit, required website, required fields, and exclusions.
+- Integrate DataForSEO Business Listings Search Live through a provider-specific adapter.
+- Keep DataForSEO credentials in `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD`; never expose them
+  to renderer contracts, persisted records, logs, or errors.
+- Execute provider requests in the Electron utility process with strict timeouts, pacing, bounded
+  retries, exponential backoff, cancellation, and continuation tokens.
+- Persist campaign lifecycle, result/import/suppression counts, warnings, failures, progress,
+  continuation, and timestamps after each completed provider page.
+- Recover interrupted queued or running campaigns into a resumable paused state at startup.
+- Preserve provider record IDs, source URLs, collection time, source update time, permitted fields,
+  field-level provenance, and retention metadata on every imported prospect.
+- Add sender-validated campaign IPC and a narrow preload API.
+- Build and visually verify an Impeccable campaign creation, history, progress, warning,
+  credential-missing, cancellation, failure, empty, and resume experience.
+- Add deterministic provider and campaign execution tests without live paid API requests.
 
 ## Excluded Scope
 
-- Campaign creation UI, provider authentication, network adapters, campaign execution, radius
-  capability negotiation, retries, and continuation processing from Feature 30.
+- Scraping Google Search, Google Maps, directories, social networks, or any provider page.
+- Storing ratings, reviews, photos, hours, descriptions, or fields outside the approved policy.
 - Prospect website verification and opportunity signals from Feature 31.
-- Prospect scoring, promotion into clients, and duplicate resolution from Feature 32.
-- Automatic outreach, form submission, or collection from unauthorized sources.
+- Prospect scoring, promotion, or duplicate resolution from Feature 32.
+- Provider credential-entry UI, outreach, form submission, or automatic client creation.
 
 ## Acceptance Criteria
 
-- Prospects and clients are separate database records and UI destinations.
-- Campaign and source schemas retain validated criteria, limits, provenance, and retention data.
-- Prospect lists are database-paginated and support documented search and filters.
-- Qualification metadata and supported non-promotion lifecycle states persist with activity.
-- Suppression creates durable match records, can mark do-not-contact, and blocks re-import after
-  prospect deletion.
-- Retention cleanup deletes expired unpromoted prospects while retaining suppression tombstones.
-- Renderer inputs are runtime validated and all privileged operations remain in Electron main.
-- Existing client, audit, report, package, and CLI behavior remains operational.
+- A configured user can create a bounded DataForSEO campaign by supported geography and category.
+- Radius controls appear only for providers that support them and require valid coordinates.
+- Invalid, excessive, or unsupported campaign criteria are rejected before any paid request.
+- Campaigns remain observable through queued, running, completed, failed, paused, and cancelled
+  states and can be cancelled or resumed where continuation is available.
+- Provider calls run outside the renderer and main event loop with bounded requests and cleanup.
+- Imported prospects retain approved source provenance and collection timestamps.
+- Suppressed records are counted and never silently re-imported.
+- Credentials and authorization headers never reach renderer state, persistence, or logs.
+- Existing prospect, client, audit, report, package, and CLI behavior remains operational.
 - Formatting, lint, type checking, tests, build, Impeccable detection, accessibility, and visual
   checks pass.
 
 ## History
 
-- 2026-07-25: Feature started after Release 2A acceptance completed and was pushed to `main`.
-- 2026-07-25: Added separate prospect and campaign persistence, provenance-aware imports,
-  qualification lifecycle controls, durable suppression and do-not-contact handling,
-  provider-defined retention cleanup, and the Impeccable prospect workspace.
+- 2026-07-25: Feature started after Feature 29 completed on
+  `feature/prospect-data-foundation`.
+- 2026-07-25: DataForSEO Business Listings API approved by the project owner for Feature 30.
+- 2026-07-25: Added validated campaign creation, DataForSEO field-minimizing adapter, utility
+  worker execution, bounded retry and pacing, cancellation, safe continuation, durable progress,
+  suppression-aware imports, and the Impeccable campaign monitor.
 - 2026-07-25: Passed Prisma validation, formatting, zero-warning linting, strict CLI and desktop
-  type checking, 276 tests across 60 files, the CLI production build, Windows x64 Electron
+  type checking, 282 tests across 62 files, the CLI production build, Windows x64 Electron
   packaging, packaged ASAR smoke, axe scans, Impeccable detection, and desktop visual review.

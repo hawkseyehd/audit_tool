@@ -5,6 +5,10 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { normalizeTargetUrl } from "../../url/normalize-url.js";
 import {
   campaignInputSchema,
+  campaignStateSchema,
+  discoveryCampaignListQuerySchema,
+  discoveryCampaignListResultSchema,
+  discoveryCampaignRecordSchema,
   prospectActionResultSchema,
   prospectImportResultSchema,
   prospectListQuerySchema,
@@ -15,6 +19,9 @@ import {
   prospectSourceInputSchema,
   prospectStateSchema,
   type CampaignInput,
+  type DiscoveryCampaignListQuery,
+  type DiscoveryCampaignListResult,
+  type DiscoveryCampaignRecord,
   type ProspectActionResult,
   type ProspectImportResult,
   type ProspectListQuery,
@@ -67,7 +74,9 @@ export class DiscoveryCampaignRepository {
         exclusionRulesJson: JSON.stringify(input.exclusionRules),
         id: randomUUID(),
         keywordsJson: JSON.stringify(input.keywords),
+        latitude: input.latitude ?? null,
         locality: input.locality ?? null,
+        longitude: input.longitude ?? null,
         maxResults: input.maxResults,
         name: input.name,
         provider: input.provider,
@@ -81,6 +90,138 @@ export class DiscoveryCampaignRepository {
     });
     return campaign.id;
   }
+
+  async get(id: string): Promise<DiscoveryCampaignRecord | null> {
+    const campaign = await this.#database.discoveryCampaign.findUnique({ where: { id } });
+    return campaign === null ? null : toCampaignRecord(campaign);
+  }
+
+  async getExecution(id: string): Promise<CampaignExecutionRecord | null> {
+    const campaign = await this.#database.discoveryCampaign.findUnique({ where: { id } });
+    if (campaign === null) return null;
+    return {
+      ...toCampaignRecord(campaign),
+      continuationToken: parseContinuation(campaign.continuationDataJson),
+    };
+  }
+
+  async list(queryValue: DiscoveryCampaignListQuery): Promise<DiscoveryCampaignListResult> {
+    const query = discoveryCampaignListQuerySchema.parse(queryValue);
+    const where: Prisma.DiscoveryCampaignWhereInput =
+      query.state === "all" ? {} : { state: query.state };
+    const [total, campaigns] = await this.#database.$transaction([
+      this.#database.discoveryCampaign.count({ where }),
+      this.#database.discoveryCampaign.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        where,
+      }),
+    ]);
+    return discoveryCampaignListResultSchema.parse({
+      items: campaigns.map(toCampaignRecord),
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+    });
+  }
+
+  async markInterrupted(): Promise<number> {
+    const result = await this.#database.discoveryCampaign.updateMany({
+      data: {
+        state: "paused",
+        warningMessage: "Campaign was interrupted when the application closed. Resume to continue.",
+      },
+      where: { state: { in: ["queued", "running"] } },
+    });
+    return result.count;
+  }
+
+  async queue(id: string): Promise<boolean> {
+    const result = await this.#database.discoveryCampaign.updateMany({
+      data: {
+        completedAt: null,
+        failureMessage: null,
+        state: "queued",
+        warningMessage: null,
+      },
+      where: { id, state: { in: ["draft", "paused", "failed", "cancelled"] } },
+    });
+    return result.count === 1;
+  }
+
+  async start(id: string): Promise<void> {
+    await this.#database.discoveryCampaign.update({
+      data: {
+        failureMessage: null,
+        startedAt: new Date(),
+        state: "running",
+      },
+      where: { id },
+    });
+  }
+
+  async recordPage(
+    id: string,
+    progress: {
+      continuationToken: string | null;
+      importedCount: number;
+      processedCount: number;
+      providerRequestCount: number;
+      suppressedCount: number;
+      warning?: string;
+    },
+  ): Promise<void> {
+    await this.#database.discoveryCampaign.update({
+      data: {
+        continuationDataJson:
+          progress.continuationToken === null
+            ? null
+            : JSON.stringify({ offsetToken: progress.continuationToken }),
+        processedCount: { increment: progress.processedCount },
+        providerRequestCount: { increment: progress.providerRequestCount },
+        resultCount: { increment: progress.importedCount },
+        suppressedCount: { increment: progress.suppressedCount },
+        ...(progress.warning === undefined ? {} : { warningMessage: progress.warning }),
+      },
+      where: { id },
+    });
+  }
+
+  async complete(id: string, warning?: string): Promise<void> {
+    await this.#database.discoveryCampaign.update({
+      data: {
+        completedAt: new Date(),
+        continuationDataJson: null,
+        failureMessage: null,
+        state: "completed",
+        ...(warning === undefined ? {} : { warningMessage: warning }),
+      },
+      where: { id },
+    });
+  }
+
+  async fail(id: string, message: string): Promise<void> {
+    await this.#database.discoveryCampaign.update({
+      data: {
+        completedAt: new Date(),
+        failureMessage: message.slice(0, 1_000),
+        state: "failed",
+      },
+      where: { id },
+    });
+  }
+
+  async cancel(id: string): Promise<void> {
+    await this.#database.discoveryCampaign.update({
+      data: { completedAt: new Date(), state: "cancelled" },
+      where: { id },
+    });
+  }
+}
+
+export interface CampaignExecutionRecord extends DiscoveryCampaignRecord {
+  continuationToken: string | null;
 }
 
 export class ProspectRepository {
@@ -474,6 +615,70 @@ function appendQualificationSearch(searchText: string, input: ProspectQualificat
     .filter((value): value is string => value !== undefined)
     .join(" ")
     .toLocaleLowerCase("en-US");
+}
+
+function toCampaignRecord(
+  campaign: Prisma.DiscoveryCampaignGetPayload<Record<string, never>>,
+): DiscoveryCampaignRecord {
+  return discoveryCampaignRecordSchema.parse({
+    category: campaign.category,
+    completedAt: campaign.completedAt?.toISOString() ?? null,
+    country: campaign.country,
+    createdAt: campaign.createdAt.toISOString(),
+    exclusionRules: parseStringArray(campaign.exclusionRulesJson),
+    failureMessage: campaign.failureMessage,
+    hasContinuation: parseContinuation(campaign.continuationDataJson) !== null,
+    id: campaign.id,
+    keywords: parseStringArray(campaign.keywordsJson),
+    latitude: campaign.latitude,
+    locality: campaign.locality,
+    longitude: campaign.longitude,
+    maxResults: campaign.maxResults,
+    name: campaign.name,
+    processedCount: campaign.processedCount,
+    provider: campaign.provider,
+    providerRequestCount: campaign.providerRequestCount,
+    radiusKm: campaign.radiusKm,
+    region: campaign.region,
+    requireWebsite: campaign.requireWebsite,
+    requiredFields: parseStringArray(campaign.requiredFieldsJson),
+    resultCount: campaign.resultCount,
+    startedAt: campaign.startedAt?.toISOString() ?? null,
+    state: campaignStateSchema.parse(campaign.state),
+    suppressedCount: campaign.suppressedCount,
+    updatedAt: campaign.updatedAt.toISOString(),
+    warningMessage: campaign.warningMessage,
+  });
+}
+
+function parseStringArray(value: string): string[] {
+  const parsed: unknown = JSON.parse(value);
+  return zStringArray(parsed);
+}
+
+function zStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+function parseContinuation(value: string | null): string | null {
+  if (value === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "offsetToken" in parsed &&
+      typeof parsed.offsetToken === "string" &&
+      parsed.offsetToken.length > 0
+    ) {
+      return parsed.offsetToken;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 async function replaceTags(

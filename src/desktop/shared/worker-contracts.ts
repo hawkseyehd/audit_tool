@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { auditConfigSchema } from "../../config/audit-config.js";
 import { auditResultSchema } from "../../core/schemas.js";
+import {
+  providerSearchInputSchema,
+  providerSearchPageSchema,
+} from "../../discovery/provider-contracts.js";
 
 const requestIdSchema = z.uuid();
 const jobIdSchema = z.uuid();
@@ -58,6 +62,21 @@ export const workerRequestSchema = z.discriminatedUnion("type", [
       type: z.literal("cancel-audit"),
     })
     .strict(),
+  z
+    .object({
+      campaignId: jobIdSchema,
+      id: requestIdSchema,
+      input: providerSearchInputSchema,
+      type: z.literal("run-discovery-page"),
+    })
+    .strict(),
+  z
+    .object({
+      campaignId: jobIdSchema,
+      id: requestIdSchema,
+      type: z.literal("cancel-discovery"),
+    })
+    .strict(),
 ]);
 
 export const workerResponseSchema = z.discriminatedUnion("type", [
@@ -94,6 +113,30 @@ export const workerResponseSchema = z.discriminatedUnion("type", [
     .strict(),
   z
     .object({
+      campaignId: jobIdSchema,
+      id: requestIdSchema,
+      page: providerSearchPageSchema,
+      type: z.literal("discovery-page-completed"),
+    })
+    .strict(),
+  z
+    .object({
+      campaignId: jobIdSchema,
+      id: requestIdSchema,
+      type: z.literal("discovery-cancelled"),
+    })
+    .strict(),
+  z
+    .object({
+      campaignId: jobIdSchema,
+      code: z.string().trim().min(1).max(80),
+      id: requestIdSchema,
+      message: z.string().trim().min(1).max(1_000),
+      type: z.literal("discovery-failed"),
+    })
+    .strict(),
+  z
+    .object({
       id: requestIdSchema,
       message: z.string().trim().min(1).max(500),
       type: z.literal("error"),
@@ -107,4 +150,8 @@ export type WorkerAuditProgress = Extract<WorkerResponse, { type: "audit-progres
 export type WorkerAuditResult = Extract<
   WorkerResponse,
   { type: "audit-cancelled" | "audit-completed" | "audit-failed" }
+>;
+export type WorkerDiscoveryResult = Extract<
+  WorkerResponse,
+  { type: "discovery-cancelled" | "discovery-failed" | "discovery-page-completed" }
 >;

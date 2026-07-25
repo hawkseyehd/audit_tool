@@ -17,12 +17,18 @@ import {
   clientRecordSchema,
   createAuditScopeRequestSchema,
   createAuditScopeResultSchema,
+  createDiscoveryCampaignRequestSchema,
   deleteClientRequestSchema,
   deleteClientResultSchema,
   deleteProspectRequestSchema,
   desktopBootstrapSchema,
   discoverWebsitePagesRequestSchema,
   discoveryResultSchema,
+  discoveryCampaignIdRequestSchema,
+  discoveryCampaignListQuerySchema,
+  discoveryCampaignListResultSchema,
+  discoveryCampaignMutationResultSchema,
+  discoveryProviderSchema,
   getAuditScopeRequestSchema,
   getClientRequestSchema,
   getProspectRequestSchema,
@@ -61,6 +67,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.cancelAuditJob, request),
     );
   },
+  async cancelDiscoveryCampaign(input) {
+    const request = discoveryCampaignIdRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.cancelDiscoveryCampaign, request),
+    );
+  },
   async createAuditScope(input) {
     const request = createAuditScopeRequestSchema.parse(input);
     return createAuditScopeResultSchema.parse(
@@ -71,6 +83,12 @@ const desktopApi: DesktopApi = {
     const request = clientInputSchema.parse(input);
     return clientMutationResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.createClient, request),
+    );
+  },
+  async createDiscoveryCampaign(input) {
+    const request = createDiscoveryCampaignRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.createDiscoveryCampaign, request),
     );
   },
   async deleteClient(input) {
@@ -116,6 +134,11 @@ const desktopApi: DesktopApi = {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getClient, request);
     return result === null ? null : clientRecordSchema.parse(result);
   },
+  async getDiscoveryProvider() {
+    return discoveryProviderSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.getDiscoveryProvider),
+    );
+  },
   async getProspect(input) {
     const request = getProspectRequestSchema.parse(input);
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.getProspect, request);
@@ -131,6 +154,12 @@ const desktopApi: DesktopApi = {
     const request = prospectListQuerySchema.parse(input);
     return prospectListResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.listProspects, request),
+    );
+  },
+  async listDiscoveryCampaigns(input) {
+    const request = discoveryCampaignListQuerySchema.parse(input);
+    return discoveryCampaignListResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.listDiscoveryCampaigns, request),
     );
   },
   async listAuditHistory(input) {
@@ -185,6 +214,12 @@ const desktopApi: DesktopApi = {
     const request = auditJobIdRequestSchema.parse(input);
     return auditJobMutationResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.retryAuditJob, request),
+    );
+  },
+  async resumeDiscoveryCampaign(input) {
+    const request = discoveryCampaignIdRequestSchema.parse(input);
+    return discoveryCampaignMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.resumeDiscoveryCampaign, request),
     );
   },
   async startAuditJob(input) {

@@ -57,6 +57,7 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       total: 0,
     }),
     openReport: vi.fn(),
+    promoteProspect: vi.fn(),
     revealReport: vi.fn(),
     setClientStatus: vi.fn(),
     setProspectState: vi.fn(),
@@ -66,6 +67,7 @@ function createApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     suppressProspect: vi.fn(),
     updateClient: vi.fn(),
     updateProspect: vi.fn(),
+    verifyProspect: vi.fn(),
     ...overrides,
   };
 }

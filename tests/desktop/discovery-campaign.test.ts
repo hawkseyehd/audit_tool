@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DesktopDatabaseService } from "../../src/desktop/main/database-service.js";
 import { DiscoveryCampaignManager } from "../../src/desktop/main/discovery-campaign-manager.js";
 import type { WorkerCoordinator } from "../../src/desktop/main/worker-coordinator.js";
-import type { DiscoveryCampaignInput } from "../../src/desktop/shared/contracts.js";
+import type { CampaignInput, DiscoveryCampaignInput } from "../../src/desktop/shared/contracts.js";
 
 const campaignInput: DiscoveryCampaignInput = {
   category: "dental_clinic",
@@ -18,30 +18,21 @@ const campaignInput: DiscoveryCampaignInput = {
   locality: "Karachi",
   maxResults: 25,
   name: "Karachi dental practices",
-  provider: "dataforseo-business-listings",
-  providerTermsVersion: "reviewed-2026-07-25",
-  requireWebsite: true,
-  requiredFields: ["businessName", "websiteUrl"],
+  provider: "playwright-web-search",
+  providerTermsVersion: "reviewed-2026-07-26",
+  requireWebsite: false,
+  requiredFields: ["businessName"],
 };
 
 let database: DesktopDatabaseService;
 let directory: string;
-const originalLogin = process.env.DATAFORSEO_LOGIN;
-const originalPassword = process.env.DATAFORSEO_PASSWORD;
-
 beforeEach(async () => {
   directory = await mkdtemp(path.join(tmpdir(), "audit-tool-campaign-"));
   database = new DesktopDatabaseService(directory);
   await database.initialize();
-  process.env.DATAFORSEO_LOGIN = "account";
-  process.env.DATAFORSEO_PASSWORD = "secret";
 });
 
 afterEach(async () => {
-  if (originalLogin === undefined) delete process.env.DATAFORSEO_LOGIN;
-  else process.env.DATAFORSEO_LOGIN = originalLogin;
-  if (originalPassword === undefined) delete process.env.DATAFORSEO_PASSWORD;
-  else process.env.DATAFORSEO_PASSWORD = originalPassword;
   await database.close();
   await rm(directory, { force: true, recursive: true });
 });
@@ -67,8 +58,20 @@ describe("DiscoveryCampaignManager", () => {
             sourceUrl: "https://example.test/source/1",
             websiteUrl: "https://northstar.example/",
           },
+          {
+            addressLine: "14 Civic Centre",
+            businessName: "Civic Dental Studio",
+            category: "Dental clinic",
+            country: "PK",
+            locality: "Karachi",
+            providerRecordId: "maps-civic-dental",
+            publicEmail: "hello@civicdental.example",
+            publicPhone: "+92 300 555 0101",
+            socialProfiles: ["https://www.linkedin.com/company/civic-dental-studio/"],
+            sourceUrl: "https://www.google.com/maps/place/Civic+Dental+Studio",
+          },
         ],
-        totalAvailable: 1,
+        totalAvailable: 2,
       },
       type: "discovery-page-completed",
     });
@@ -92,9 +95,9 @@ describe("DiscoveryCampaignManager", () => {
 
     const campaign = await database.campaigns.get(created.campaign.id);
     expect(campaign).toMatchObject({
-      processedCount: 1,
+      processedCount: 2,
       providerRequestCount: 1,
-      resultCount: 1,
+      resultCount: 2,
       state: "completed",
     });
     const prospects = await database.listProspects({
@@ -108,29 +111,73 @@ describe("DiscoveryCampaignManager", () => {
       state: "all",
       websiteAvailability: "all",
     });
-    expect(prospects.items[0]).toMatchObject({
-      businessName: "Northstar Dental",
-      campaignId: created.campaign.id,
-      sourceProvider: "dataforseo-business-listings",
-    });
+    expect(prospects.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          businessName: "Northstar Dental",
+          campaignId: created.campaign.id,
+          websiteUrl: "https://northstar.example/",
+        }),
+        expect.objectContaining({
+          businessName: "Civic Dental Studio",
+          publicEmail: "hello@civicdental.example",
+          publicPhone: "+92 300 555 0101",
+          socialProfiles: ["https://www.linkedin.com/company/civic-dental-studio/"],
+          sourceProvider: "playwright-web-search",
+          websiteUrl: null,
+        }),
+      ]),
+    );
+    expect(runDiscoveryPage).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "playwright-web-search" }),
+    );
     await manager.stop();
   });
 
-  it("refuses paid execution before creating a campaign when credentials are absent", async () => {
-    delete process.env.DATAFORSEO_LOGIN;
-    delete process.env.DATAFORSEO_PASSWORD;
+  it("runs browser campaigns without provider credentials", async () => {
+    const runDiscoveryPage = vi.fn().mockResolvedValue({
+      campaignId: "unused",
+      id: "unused",
+      page: {
+        continuationToken: null,
+        providerRequestCount: 2,
+        records: [],
+        totalAvailable: 0,
+      },
+      type: "discovery-page-completed",
+    });
+    const manager = new DiscoveryCampaignManager({
+      database,
+      logger: pino({ enabled: false }),
+      worker: { ready: true, runDiscoveryPage } as unknown as WorkerCoordinator,
+    });
+
+    const result = await manager.create(campaignInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected campaign creation");
+    await expect
+      .poll(async () => (await database.campaigns.get(result.campaign.id))?.state)
+      .toBe("completed");
+  });
+
+  it("does not resume legacy API campaigns", async () => {
+    const legacyInput: CampaignInput = {
+      ...campaignInput,
+      provider: "dataforseo-business-listings",
+      providerTermsVersion: "reviewed-2026-07-25",
+    };
+    const id = await database.campaigns.create(legacyInput);
+    await database.campaigns.queue(id);
+    await database.campaigns.cancel(id);
     const manager = new DiscoveryCampaignManager({
       database,
       logger: pino({ enabled: false }),
       worker: { ready: true } as WorkerCoordinator,
     });
 
-    await expect(manager.create(campaignInput)).resolves.toMatchObject({
-      error: { code: "not-configured" },
+    await expect(manager.resume(id)).resolves.toMatchObject({
+      error: { code: "invalid-state" },
       ok: false,
     });
-    await expect(
-      database.campaigns.list({ page: 1, pageSize: 10, state: "all" }),
-    ).resolves.toMatchObject({ total: 0 });
   });
 });

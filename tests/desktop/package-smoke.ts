@@ -273,7 +273,7 @@ try {
         maxResults: 100,
         name: "Karachi dental practices",
         processedCount: 100,
-        provider: "dataforseo-business-listings",
+        provider: "playwright-web-search",
         providerRequestCount: 1,
         providerTermsVersion: "reviewed-2026-07-25",
         region: "Sindh",

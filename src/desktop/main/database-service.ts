@@ -28,6 +28,7 @@ import {
   type ProspectListQuery,
   type ProspectListResult,
   type ProspectMutationResult,
+  type ProspectPromotionResult,
   type ProspectQualificationInput,
   type ProspectRecord,
   type ProspectState,
@@ -46,7 +47,11 @@ import { HISTORY_SCHEMA_STATEMENTS } from "./history-migrations.js";
 import { PageDiscoveryService } from "./page-discovery-service.js";
 import { PageInventoryRepository } from "./page-inventory-repository.js";
 import { PAGE_SCHEMA_STATEMENTS } from "./page-migrations.js";
-import { CAMPAIGN_SCHEMA_COLUMNS, PROSPECT_SCHEMA_STATEMENTS } from "./prospect-migrations.js";
+import {
+  CAMPAIGN_SCHEMA_COLUMNS,
+  PROSPECT_SCHEMA_COLUMNS,
+  PROSPECT_SCHEMA_STATEMENTS,
+} from "./prospect-migrations.js";
 import { DiscoveryCampaignRepository, ProspectRepository } from "./prospect-repository.js";
 import { SCOPE_SCHEMA_STATEMENTS } from "./scope-migrations.js";
 
@@ -112,6 +117,17 @@ export class DesktopDatabaseService {
       if (!existingCampaignColumns.has(column.name)) {
         await this.#client.$executeRawUnsafe(
           `ALTER TABLE "DiscoveryCampaign" ADD COLUMN ${column.definition}`,
+        );
+      }
+    }
+    const prospectColumns = await this.#client.$queryRawUnsafe<{ name: string }[]>(
+      'PRAGMA table_info("Prospect")',
+    );
+    const existingProspectColumns = new Set(prospectColumns.map((column) => column.name));
+    for (const column of PROSPECT_SCHEMA_COLUMNS) {
+      if (!existingProspectColumns.has(column.name)) {
+        await this.#client.$executeRawUnsafe(
+          `ALTER TABLE "Prospect" ADD COLUMN ${column.definition}`,
         );
       }
     }
@@ -196,6 +212,14 @@ export class DesktopDatabaseService {
 
   updateProspect(id: string, input: ProspectQualificationInput): Promise<ProspectMutationResult> {
     return this.#requireProspects().updateQualification(id, input);
+  }
+
+  verifyProspect(id: string): Promise<ProspectMutationResult> {
+    return this.#requireProspects().verify(id);
+  }
+
+  promoteProspect(id: string, existingClientId?: string): Promise<ProspectPromotionResult> {
+    return this.#requireProspects().promote(id, existingClientId);
   }
 
   setProspectState(id: string, state: ProspectState): Promise<ProspectMutationResult> {

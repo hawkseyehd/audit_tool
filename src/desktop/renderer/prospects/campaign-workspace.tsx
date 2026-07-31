@@ -49,16 +49,11 @@ interface CampaignFormState {
   country: string;
   exclusions: string;
   keywords: string;
-  latitude: string;
   locality: string;
-  longitude: string;
   maxResults: number;
   name: string;
   phoneRequired: boolean;
-  radiusEnabled: boolean;
-  radiusKm: number;
   region: string;
-  requireWebsite: boolean;
 }
 
 const initialForm: CampaignFormState = {
@@ -67,16 +62,11 @@ const initialForm: CampaignFormState = {
   country: "",
   exclusions: "",
   keywords: "",
-  latitude: "",
   locality: "",
-  longitude: "",
   maxResults: 100,
   name: "",
   phoneRequired: false,
-  radiusEnabled: false,
-  radiusKm: 10,
   region: "",
-  requireWebsite: true,
 };
 
 function CampaignStatus(props: { state: CampaignState }): React.JSX.Element {
@@ -109,7 +99,6 @@ function CampaignForm(props: {
     setError(undefined);
     const requiredFields = [
       "businessName" as const,
-      ...(form.requireWebsite ? (["websiteUrl"] as const) : []),
       ...(form.phoneRequired ? (["publicPhone"] as const) : []),
       ...(form.addressRequired ? (["addressLine"] as const) : []),
     ];
@@ -118,16 +107,13 @@ function CampaignForm(props: {
       country: form.country,
       exclusionRules: splitLines(form.exclusions),
       keywords: splitComma(form.keywords),
-      ...(form.radiusEnabled ? { latitude: Number(form.latitude) } : {}),
       locality: form.locality,
-      ...(form.radiusEnabled ? { longitude: Number(form.longitude) } : {}),
       maxResults: form.maxResults,
       name: form.name,
       provider: props.provider.id,
       providerTermsVersion: props.provider.termsVersion,
-      ...(form.radiusEnabled ? { radiusKm: form.radiusKm } : {}),
       region: form.region,
-      requireWebsite: form.requireWebsite,
+      requireWebsite: false,
       requiredFields,
     });
     if (!parsed.success) {
@@ -165,19 +151,9 @@ function CampaignForm(props: {
         </button>
         <div>
           <h2 id="campaign-form-title">New discovery campaign</h2>
-          <p>DataForSEO Business Listings</p>
+          <p>{props.provider.label}</p>
         </div>
       </header>
-
-      {!props.provider.configured && (
-        <div className="campaign-provider-warning" role="alert">
-          <Ban aria-hidden="true" size={18} />
-          <div>
-            <strong>Provider credentials required</strong>
-            <span>Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD, then restart the app.</span>
-          </div>
-        </div>
-      )}
 
       {error !== undefined && (
         <div className="form-error" role="alert">
@@ -215,23 +191,13 @@ function CampaignForm(props: {
                 value={form.maxResults}
               />
             </label>
-            <label className="check-field campaign-check-field">
-              <input
-                checked={form.requireWebsite}
-                onChange={(event) => {
-                  set("requireWebsite", event.target.checked);
-                }}
-                type="checkbox"
-              />
-              <span>Only businesses with websites</span>
-            </label>
           </div>
         </div>
 
         <div className="campaign-form-section">
           <div className="campaign-form-section-heading">
             <span>Search area</span>
-            <p>Provider geography filters.</p>
+            <p>Use a city or region to focus the browser search.</p>
           </div>
           <div className="campaign-form-grid">
             <label className="form-field">
@@ -269,63 +235,6 @@ function CampaignForm(props: {
               />
             </label>
           </div>
-
-          {props.provider.supportsRadius && (
-            <div className="campaign-radius">
-              <label className="check-field">
-                <input
-                  checked={form.radiusEnabled}
-                  onChange={(event) => {
-                    set("radiusEnabled", event.target.checked);
-                  }}
-                  type="checkbox"
-                />
-                <span>Limit by coordinate radius</span>
-              </label>
-              {form.radiusEnabled && (
-                <div className="campaign-form-grid">
-                  <label className="form-field">
-                    <span>Latitude *</span>
-                    <input
-                      max={90}
-                      min={-90}
-                      onChange={(event) => {
-                        set("latitude", event.target.value);
-                      }}
-                      step="any"
-                      type="number"
-                      value={form.latitude}
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span>Longitude *</span>
-                    <input
-                      max={180}
-                      min={-180}
-                      onChange={(event) => {
-                        set("longitude", event.target.value);
-                      }}
-                      step="any"
-                      type="number"
-                      value={form.longitude}
-                    />
-                  </label>
-                  <label className="form-field">
-                    <span>Radius (km) *</span>
-                    <input
-                      max={500}
-                      min={1}
-                      onChange={(event) => {
-                        set("radiusKm", Number(event.target.value));
-                      }}
-                      type="number"
-                      value={form.radiusKm}
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="campaign-form-section">
@@ -341,7 +250,7 @@ function CampaignForm(props: {
                 onChange={(event) => {
                   set("category", event.target.value);
                 }}
-                placeholder="dental_clinic"
+                placeholder="dentist"
                 value={form.category}
               />
             </label>
@@ -397,17 +306,16 @@ function CampaignForm(props: {
 
         <footer className="campaign-form-footer">
           <div>
-            <strong>Paid provider request</strong>
-            <span>Up to 5 API requests. Charges depend on the configured DataForSEO account.</span>
+            <strong>Rendered map-page search</strong>
+            <span>
+              Includes businesses with and without websites. Public contact details are retained
+              when displayed.
+            </span>
           </div>
           <button className="button secondary" onClick={props.onCancel} type="button">
             Cancel
           </button>
-          <button
-            className="button primary"
-            disabled={!props.provider.configured || submitting}
-            type="submit"
-          >
+          <button className="button primary" disabled={submitting} type="submit">
             {submitting ? (
               <LoaderCircle aria-hidden="true" className="spin" size={16} />
             ) : (
@@ -516,7 +424,7 @@ export function CampaignWorkspace(props: { onBackToProspects: () => void }): Rea
           </button>
           <div>
             <h2 id="campaign-directory-title">Discovery campaigns</h2>
-            <p>Bounded searches through approved business-data providers.</p>
+            <p>Bounded Playwright searches across rendered public map pages.</p>
           </div>
         </div>
         <button
@@ -531,16 +439,6 @@ export function CampaignWorkspace(props: { onBackToProspects: () => void }): Rea
           New campaign
         </button>
       </div>
-
-      {provider !== undefined && !provider.configured && (
-        <div className="campaign-provider-warning" role="status">
-          <Ban aria-hidden="true" size={18} />
-          <div>
-            <strong>DataForSEO is not configured</strong>
-            <span>Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD, then restart the app.</span>
-          </div>
-        </div>
-      )}
 
       {actionError !== undefined && (
         <div className="form-error" role="alert">

@@ -339,8 +339,16 @@ An adapter must define:
 - Terms or license restrictions relevant to storage and reuse.
 - Test doubles that prevent network dependence in the normal test suite.
 
-The application must not implement unauthorized scraping of search engines, map products,
-directories, or social networks.
+The approved browser provider may use Playwright to read rendered public Google Maps business
+cards and detail pages without calling a Maps, Places, business-data, search, directory,
+geocoding, or prospect API. It must not call hidden service endpoints, submit forms, bypass
+CAPTCHAs, evade access controls, rotate identities, or import social networks as prospect
+records.
+
+The provider must retain businesses with and without websites. When a website is displayed, it
+must be stored with source provenance. For a business without a website, the provider should
+retain any visibly displayed public business phone, email, address, and associated company
+profile URL. Personal social profiles and individual contact details remain prohibited.
 
 ### 12.3 Prospect Record
 

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import type { Prisma, PrismaClient } from "@prisma/client";
 
+import { parseAuditConfig } from "../../config/audit-config.js";
+import { crawlWebsite } from "../../crawler/crawler.js";
 import { normalizeTargetUrl } from "../../url/normalize-url.js";
 import {
   campaignInputSchema,
@@ -14,6 +16,7 @@ import {
   prospectListQuerySchema,
   prospectListResultSchema,
   prospectMutationResultSchema,
+  prospectPromotionResultSchema,
   prospectQualificationInputSchema,
   prospectRecordSchema,
   prospectSourceInputSchema,
@@ -27,6 +30,7 @@ import {
   type ProspectListQuery,
   type ProspectListResult,
   type ProspectMutationResult,
+  type ProspectPromotionResult,
   type ProspectQualificationInput,
   type ProspectRecord,
   type ProspectSourceInput,
@@ -279,7 +283,46 @@ export class ProspectRepository {
       include: detailInclude,
       where: { id },
     });
-    return prospect === null ? null : toRecord(prospect);
+    if (prospect === null) return null;
+    return toRecord(prospect, await this.#duplicateCandidates(prospect));
+  }
+
+  async #duplicateCandidates(prospect: DetailProspect): Promise<DuplicateCandidate[]> {
+    const phone = normalizePhone(prospect.publicPhone);
+    const prospects = await this.#database.prospect.findMany({
+      select: {
+        addressLine: true,
+        businessName: true,
+        id: true,
+        normalizedDomain: true,
+        publicPhone: true,
+      },
+      take: 250,
+      where: { id: { not: prospect.id } },
+    });
+    const clients = await this.#database.client.findMany({
+      include: { websites: { select: { normalizedDomain: true }, take: 1 } },
+      take: 250,
+    });
+    return [
+      ...prospects.flatMap((candidate) =>
+        candidateMatch(prospect, phone, {
+          ...candidate,
+          domain: candidate.normalizedDomain,
+          kind: "prospect" as const,
+        }),
+      ),
+      ...clients.flatMap((candidate) =>
+        candidateMatch(prospect, phone, {
+          addressLine: candidate.addressLine,
+          businessName: candidate.businessName,
+          domain: candidate.websites[0]?.normalizedDomain ?? null,
+          id: candidate.id,
+          kind: "client" as const,
+          publicPhone: candidate.publicPhone,
+        }),
+      ),
+    ].slice(0, 25);
   }
 
   async importFromSource(inputValue: ProspectSourceInput): Promise<ProspectImportResult> {
@@ -457,6 +500,224 @@ export class ProspectRepository {
       });
     });
     return this.#success(id);
+  }
+
+  async verify(id: string): Promise<ProspectMutationResult> {
+    const prospect = await this.#database.prospect.findUnique({ where: { id } });
+    if (prospect === null) return mutationError("not-found", "Prospect was not found");
+    const verifiedAt = new Date();
+    if (prospect.normalizedWebsiteUrl === null) {
+      await this.#database.$transaction([
+        this.#database.prospect.update({
+          data: {
+            lastVerifiedAt: verifiedAt,
+            verificationMessage: "No website was listed in the imported public record.",
+            verificationState: "partial",
+            websiteAvailability: "unavailable",
+          },
+          where: { id },
+        }),
+        this.#database.prospectActivity.create({
+          data: {
+            id: randomUUID(),
+            kind: "verification",
+            prospectId: id,
+            summary: "Public record verified without a listed website",
+          },
+        }),
+        this.#database.discoverySourceRecord.updateMany({
+          data: { lastVerifiedAt: verifiedAt },
+          where: { prospectId: id },
+        }),
+      ]);
+      return this.#success(id);
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort(new Error("Prospect verification exceeded its two-minute safety limit"));
+    }, 120_000);
+    try {
+      const result = await crawlWebsite({
+        config: parseAuditConfig({
+          includeAccessibility: false,
+          includeAnalytics: false,
+          includeForms: false,
+          includeLighthouse: false,
+          includeSecurity: false,
+          includeSeo: false,
+          includeUxHeuristics: false,
+          maxPages: 10,
+          submitForms: false,
+          targetUrl: prospect.normalizedWebsiteUrl,
+          viewports: ["desktop"],
+          writeClientSummaryPdf: false,
+          writeHtml: false,
+          writeJson: false,
+          writeMarkdown: false,
+          writePdf: false,
+          writePdfSummary: false,
+        }),
+        signal: controller.signal,
+      });
+      const homepage = result.pages[0];
+      const successfulPages = result.pages.filter((page) => page.error === undefined);
+      await this.#database.$transaction([
+        this.#database.prospect.update({
+          data: {
+            discoveredPageCount: successfulPages.length,
+            homepageTitle: homepage?.title ?? null,
+            lastVerifiedAt: verifiedAt,
+            verificationMessage:
+              successfulPages.length === 0 ? "The listed website could not be reached." : null,
+            verificationState: successfulPages.length === 0 ? "failed" : "verified",
+            verifiedWebsiteUrl: homepage?.url ?? prospect.normalizedWebsiteUrl,
+            websiteAvailability: successfulPages.length === 0 ? "unavailable" : "available",
+          },
+          where: { id },
+        }),
+        this.#database.prospectActivity.create({
+          data: {
+            id: randomUUID(),
+            kind: "verification",
+            prospectId: id,
+            summary: `Website verification observed ${String(successfulPages.length)} page${successfulPages.length === 1 ? "" : "s"}`,
+          },
+        }),
+        this.#database.discoverySourceRecord.updateMany({
+          data: { lastVerifiedAt: verifiedAt },
+          where: { prospectId: id },
+        }),
+      ]);
+      return await this.#success(id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Website verification failed";
+      await this.#database.$transaction([
+        this.#database.prospect.update({
+          data: {
+            lastVerifiedAt: verifiedAt,
+            verificationMessage: message.slice(0, 500),
+            verificationState: "failed",
+            websiteAvailability: "unavailable",
+          },
+          where: { id },
+        }),
+        this.#database.discoverySourceRecord.updateMany({
+          data: { lastVerifiedAt: verifiedAt },
+          where: { prospectId: id },
+        }),
+      ]);
+      return await this.#success(id);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async promote(id: string, existingClientId?: string): Promise<ProspectPromotionResult> {
+    const prospect = await this.#database.prospect.findUnique({
+      include: { tags: { include: { tag: true } } },
+      where: { id },
+    });
+    if (prospect === null) return promotionError("not-found", "Prospect was not found");
+    if (prospect.promotedClientId !== null) {
+      return promotionError(
+        "already-promoted",
+        "This prospect is already linked to a client.",
+        prospect.promotedClientId,
+      );
+    }
+    if (prospect.state !== "qualified") {
+      return promotionError("invalid-state", "Only qualified prospects can be promoted.");
+    }
+
+    const domainClient =
+      prospect.normalizedDomain === null
+        ? null
+        : await this.#database.website.findUnique({
+            select: { clientId: true },
+            where: { normalizedDomain: prospect.normalizedDomain },
+          });
+    if (domainClient !== null && existingClientId !== domainClient.clientId) {
+      return promotionError(
+        "duplicate-domain",
+        "A client already uses this website. Review and link that client explicitly.",
+        domainClient.clientId,
+      );
+    }
+    if (existingClientId !== undefined) {
+      const existing = await this.#database.client.findUnique({ where: { id: existingClientId } });
+      if (existing === null)
+        return promotionError("not-found", "The selected client was not found.");
+    }
+
+    const clientId = existingClientId ?? randomUUID();
+    await this.#database.$transaction(async (database) => {
+      if (existingClientId === undefined) {
+        await database.client.create({
+          data: {
+            addressLine: prospect.addressLine,
+            businessName: prospect.businessName,
+            category: prospect.category,
+            country: prospect.country,
+            id: clientId,
+            locality: prospect.locality,
+            notes: prospect.notes,
+            owner: prospect.owner,
+            postalCode: prospect.postalCode,
+            publicEmail: prospect.publicEmail,
+            publicPhone: prospect.publicPhone,
+            region: prospect.region,
+            searchText: prospect.searchText,
+            ...(prospect.normalizedWebsiteUrl === null || prospect.normalizedDomain === null
+              ? {}
+              : {
+                  websites: {
+                    create: {
+                      id: randomUUID(),
+                      normalizedDomain: prospect.normalizedDomain,
+                      normalizedUrl: prospect.normalizedWebsiteUrl,
+                      url: prospect.websiteUrl ?? prospect.normalizedWebsiteUrl,
+                    },
+                  },
+                }),
+          },
+        });
+        for (const { tag } of prospect.tags) {
+          await database.clientTag.create({ data: { clientId, tagId: tag.id } });
+        }
+      }
+      await database.prospect.update({
+        data: { promotedClientId: clientId, state: "promoted" },
+        where: { id },
+      });
+      await database.clientActivity.create({
+        data: {
+          clientId,
+          id: randomUUID(),
+          kind: "prospect-promotion",
+          summary: `Linked from prospect ${prospect.businessName}`,
+        },
+      });
+      await database.prospectActivity.create({
+        data: {
+          id: randomUUID(),
+          kind: "promoted",
+          prospectId: id,
+          summary:
+            existingClientId === undefined
+              ? "Promoted to a new client"
+              : "Linked to an existing client",
+        },
+      });
+    });
+    const updated = await this.get(id);
+    if (updated === null) return promotionError("not-found", "Promoted prospect was not found.");
+    return prospectPromotionResultSchema.parse({
+      clientId,
+      nextAction: prospect.normalizedWebsiteUrl === null ? "complete-profile" : "discover-pages",
+      ok: true,
+      prospect: updated,
+    });
   }
 
   async setState(id: string, state: ProspectState): Promise<ProspectMutationResult> {
@@ -702,7 +963,12 @@ async function replaceTags(
   }
 }
 
-function toRecord(prospect: DetailProspect): ProspectRecord {
+type DuplicateCandidate = ProspectRecord["duplicateCandidates"][number];
+
+function toRecord(
+  prospect: DetailProspect,
+  duplicateCandidates: readonly DuplicateCandidate[] = [],
+): ProspectRecord {
   return prospectRecordSchema.parse({
     activities: prospect.activities.map((activity) => ({
       createdAt: activity.createdAt.toISOString(),
@@ -720,12 +986,15 @@ function toRecord(prospect: DetailProspect): ProspectRecord {
     discoveredPageCount: prospect.discoveredPageCount,
     doNotContactAt: prospect.doNotContactAt?.toISOString() ?? null,
     duplicateReviewState: prospect.duplicateReviewState,
+    duplicateCandidates,
     firstDiscoveredAt: prospect.firstDiscoveredAt.toISOString(),
+    homepageTitle: prospect.homepageTitle,
     id: prospect.id,
     lastVerifiedAt: prospect.lastVerifiedAt?.toISOString() ?? null,
     locality: prospect.locality,
     normalizedDomain: prospect.normalizedDomain,
     notes: prospect.notes,
+    opportunitySignals: opportunitySignals(prospect),
     owner: prospect.owner,
     postalCode: prospect.postalCode,
     promotedClientId: prospect.promotedClientId,
@@ -755,9 +1024,115 @@ function toRecord(prospect: DetailProspect): ProspectRecord {
     suppressedAt: prospect.suppressedAt?.toISOString() ?? null,
     tags: prospect.tags.map(({ tag }) => tag.name).sort((left, right) => left.localeCompare(right)),
     updatedAt: prospect.updatedAt.toISOString(),
+    verificationMessage: prospect.verificationMessage,
+    verificationState: prospect.verificationState,
+    verifiedWebsiteUrl: prospect.verifiedWebsiteUrl,
     websiteAvailability: prospect.websiteAvailability,
     websiteUrl: prospect.normalizedWebsiteUrl,
   });
+}
+
+function normalizePhone(value: string | null): string | null {
+  if (value === null) return null;
+  const digits = value.replace(/\D/gu, "");
+  return digits.length < 7 ? null : digits.slice(-10);
+}
+
+function normalizedWords(value: string | null): string[] {
+  return (value ?? "")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/u)
+    .filter((word) => word.length > 1);
+}
+
+function wordSimilarity(left: string | null, right: string | null): number {
+  const a = new Set(normalizedWords(left));
+  const b = new Set(normalizedWords(right));
+  if (a.size === 0 || b.size === 0) return 0;
+  const overlap = [...a].filter((word) => b.has(word)).length;
+  return overlap / Math.max(a.size, b.size);
+}
+
+function candidateMatch(
+  prospect: DetailProspect,
+  phone: string | null,
+  candidate: {
+    addressLine: string | null;
+    businessName: string;
+    domain: string | null;
+    id: string;
+    kind: "client" | "prospect";
+    publicPhone: string | null;
+  },
+): DuplicateCandidate[] {
+  const reasons: DuplicateCandidate["reasons"] = [];
+  if (prospect.normalizedDomain !== null && prospect.normalizedDomain === candidate.domain) {
+    reasons.push("domain");
+  }
+  if (phone !== null && phone === normalizePhone(candidate.publicPhone)) reasons.push("phone");
+  if (
+    wordSimilarity(prospect.businessName, candidate.businessName) >= 0.8 &&
+    wordSimilarity(prospect.addressLine, candidate.addressLine) >= 0.5
+  ) {
+    reasons.push("name-and-address");
+  }
+  if (reasons.length === 0) return [];
+  return [
+    {
+      businessName: candidate.businessName,
+      confidence: reasons.includes("domain") || reasons.includes("phone") ? "exact" : "possible",
+      id: candidate.id,
+      kind: candidate.kind,
+      reasons,
+    },
+  ];
+}
+
+function opportunitySignals(prospect: DetailProspect): ProspectRecord["opportunitySignals"] {
+  const signals: ProspectRecord["opportunitySignals"] = [];
+  if (prospect.normalizedWebsiteUrl === null) {
+    signals.push({
+      kind: "no-website-listed",
+      label: "No public website is listed",
+      tone: "attention",
+    });
+  } else if (prospect.websiteAvailability === "available") {
+    signals.push({
+      kind: "website-reachable",
+      label: "The listed website is reachable",
+      tone: "positive",
+    });
+    if ((prospect.verifiedWebsiteUrl ?? prospect.normalizedWebsiteUrl).startsWith("https://")) {
+      signals.push({
+        kind: "https-available",
+        label: "The verified website uses HTTPS",
+        tone: "positive",
+      });
+    }
+    if ((prospect.discoveredPageCount ?? 0) <= 2) {
+      signals.push({
+        kind: "limited-page-presence",
+        label: "Only a small public page set was observed",
+        tone: "attention",
+      });
+    }
+  } else if (prospect.verificationState === "failed") {
+    signals.push({
+      kind: "website-unavailable",
+      label: "The listed website was not reachable during verification",
+      tone: "attention",
+    });
+  }
+  if (prospect.publicPhone !== null || prospect.publicEmail !== null) {
+    signals.push({
+      kind: "public-contact-available",
+      label: "Public business contact details are available",
+      tone: "info",
+    });
+  }
+  return signals;
 }
 
 function toListRecord(
@@ -784,4 +1159,15 @@ function actionError(
   message: string,
 ): ProspectActionResult {
   return prospectActionResultSchema.parse({ error: { code, message }, ok: false });
+}
+
+function promotionError(
+  code: "already-promoted" | "duplicate-domain" | "invalid-state" | "not-found",
+  message: string,
+  clientId?: string,
+): ProspectPromotionResult {
+  return prospectPromotionResultSchema.parse({
+    error: { ...(clientId === undefined ? {} : { clientId }), code, message },
+    ok: false,
+  });
 }

@@ -38,6 +38,8 @@ import {
   prospectListQuerySchema,
   prospectListResultSchema,
   prospectMutationResultSchema,
+  prospectPromotionRequestSchema,
+  prospectPromotionResultSchema,
   prospectRecordSchema,
   reportArtifactActionRequestSchema,
   reportArtifactActionResultSchema,
@@ -49,6 +51,7 @@ import {
   suppressProspectRequestSchema,
   updateClientRequestSchema,
   updateProspectRequestSchema,
+  verifyProspectRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
   type DesktopApi,
@@ -156,6 +159,12 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(IPC_CHANNELS.listProspects, request),
     );
   },
+  async promoteProspect(input) {
+    const request = prospectPromotionRequestSchema.parse(input);
+    return prospectPromotionResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.promoteProspect, request),
+    );
+  },
   async listDiscoveryCampaigns(input) {
     const request = discoveryCampaignListQuerySchema.parse(input);
     return discoveryCampaignListResultSchema.parse(
@@ -244,6 +253,12 @@ const desktopApi: DesktopApi = {
     const request = updateProspectRequestSchema.parse(input);
     return prospectMutationResultSchema.parse(
       await ipcRenderer.invoke(IPC_CHANNELS.updateProspect, request),
+    );
+  },
+  async verifyProspect(input) {
+    const request = verifyProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(
+      await ipcRenderer.invoke(IPC_CHANNELS.verifyProspect, request),
     );
   },
 };

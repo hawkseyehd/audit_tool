@@ -1,6 +1,6 @@
 import { runAuditOrchestration } from "../../core/audit-orchestrator.js";
 import { crawlWebsite } from "../../crawler/crawler.js";
-import { searchDataForSeoBusinesses } from "../../discovery/dataforseo-provider.js";
+import { searchPlaywrightWebBusinesses } from "../../discovery/playwright-web-provider.js";
 import {
   workerRequestSchema,
   type WorkerRequest,
@@ -141,7 +141,7 @@ async function runDiscoveryPage(
   controller: AbortController,
 ): Promise<void> {
   try {
-    const page = await searchDataForSeoBusinesses(request.input, {
+    const page = await searchPlaywrightWebBusinesses(request.input, {
       signal: controller.signal,
     });
     post({

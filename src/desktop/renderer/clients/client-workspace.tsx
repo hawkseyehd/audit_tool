@@ -191,7 +191,7 @@ function ClientDetail(props: {
             <dl className="details-list client-profile-list">
               <div>
                 <dt>Website</dt>
-                <dd>{props.client.websiteUrl}</dd>
+                <dd>{props.client.websiteUrl ?? "Not recorded"}</dd>
               </div>
               <div>
                 <dt>Category</dt>
@@ -260,9 +260,15 @@ function ClientDetail(props: {
             </details>
           </div>
         )}
-        {tab === "pages" && (
-          <WebsitePages clientId={props.client.id} websiteUrl={props.client.websiteUrl} />
-        )}
+        {tab === "pages" &&
+          (props.client.websiteUrl === null ? (
+            <div className="empty-state compact">
+              <h3>No website recorded</h3>
+              <p>Add a website to this client before discovering pages.</p>
+            </div>
+          ) : (
+            <WebsitePages clientId={props.client.id} websiteUrl={props.client.websiteUrl} />
+          ))}
         {tab === "audits" && <AuditJobs clientId={props.client.id} />}
         {tab === "reports" && <ReportLibrary clientId={props.client.id} />}
         {tab === "activity" && (

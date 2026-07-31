@@ -37,6 +37,8 @@ import {
   prospectListQuerySchema,
   prospectListResultSchema,
   prospectMutationResultSchema,
+  prospectPromotionRequestSchema,
+  prospectPromotionResultSchema,
   prospectRecordSchema,
   reportArtifactActionRequestSchema,
   reportArtifactActionResultSchema,
@@ -48,6 +50,7 @@ import {
   suppressProspectRequestSchema,
   updateClientRequestSchema,
   updateProspectRequestSchema,
+  verifyProspectRequestSchema,
   websitePageListQuerySchema,
   websitePageListResultSchema,
 } from "../shared/contracts.js";
@@ -147,6 +150,18 @@ export function registerIpcHandlers(window: BrowserWindow, services: Application
     const request = deleteProspectRequestSchema.parse(input);
     return prospectActionResultSchema.parse(
       await services.database.deleteProspect(request.id, request.confirmation),
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.verifyProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = verifyProspectRequestSchema.parse(input);
+    return prospectMutationResultSchema.parse(await services.database.verifyProspect(request.id));
+  });
+  ipcMain.handle(IPC_CHANNELS.promoteProspect, async (event, input: unknown) => {
+    assertTrustedSender(event, window);
+    const request = prospectPromotionRequestSchema.parse(input);
+    return prospectPromotionResultSchema.parse(
+      await services.database.promoteProspect(request.id, request.existingClientId),
     );
   });
   ipcMain.handle(IPC_CHANNELS.getDiscoveryProvider, (event, ...arguments_: unknown[]) => {

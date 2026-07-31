@@ -805,9 +805,16 @@ polish, and Electron window-based visual verification.
 ### 30.2 Add approved provider adapters
 
 - Document provider terms, allowed fields, authentication, limits, pagination, and retention.
-- Add rate limiting, bounded retries, backoff, cancellation, and safe continuation.
+- Use Playwright to read rendered public Google Maps business cards and detail pages without a
+  Maps, Places, business-data, search, directory, geocoding, or prospect API.
+- Import prospects with and without websites. Preserve a displayed website when available and
+  retain displayed public business phone, email, address, and associated company-profile URLs.
+- Exclude personal profiles and individual contact details.
+- Extract only displayed public business fields from page content and preserve the source URL.
+- Add bounded pacing, navigation limits, cancellation, browser cleanup, and safe continuation.
 - Add deterministic provider test doubles.
-- Do not scrape prohibited search engines, map products, directories, or social networks.
+- Do not call hidden service endpoints, submit forms, bypass CAPTCHAs, evade access controls,
+  rotate identities, or import social networks and directories as prospects.
 
 ### 30.3 Add campaign execution and monitoring
 
@@ -816,6 +823,8 @@ polish, and Electron window-based visual verification.
 - Preserve source record IDs, URLs, and collection timestamps.
 
 ## 31. Prospect Enrichment, Verification, and Deduplication
+
+**Status:** Complete (2026-07-31)
 
 ### 31.1 Normalize imported business data
 
@@ -837,6 +846,8 @@ polish, and Electron window-based visual verification.
 
 ## 32. Prospect Qualification and Client Promotion
 
+**Status:** Complete (2026-07-31)
+
 ### 32.1 Add prospect review workflows
 
 - Support notes, tags, ownership, qualification state, and suppression.
@@ -857,6 +868,8 @@ polish, and Electron window-based visual verification.
 - Do not start a full audit automatically.
 
 ## 33. Release 2B Compliance and Acceptance
+
+**Status:** Complete (2026-07-31)
 
 ### 33.1 Validate provider and privacy controls
 

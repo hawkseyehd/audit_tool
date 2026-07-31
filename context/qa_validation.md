@@ -232,26 +232,63 @@ production build, Windows x64 Electron packaging, and the packaged ASAR smoke te
 
 ## Discovery Campaign Validation
 
-Feature 30 adds an approved DataForSEO Business Listings adapter and durable campaign execution.
-Provider tests verify outbound criteria, Basic authentication without plaintext credential
-exposure, response validation, approved-field minimization, website and exclusion filtering,
-continuation, and bounded retry behavior. Campaign tests verify credentials are required before a
-paid campaign is created, provider pages execute through the utility worker, progress is persisted
-after import, source provenance is retained, and completed records appear in the prospect
-workspace.
+Feature 30 uses a Playwright-only provider with durable campaign execution. It reads rendered
+Google Maps result cards and business detail pages without calling Maps, Places, business-data,
+search, directory, geocoding, or prospect APIs.
+Provider tests verify bounded result handling, visible-field extraction, exclusion filtering,
+website requirements, continuation, skipped-page warnings, and browser cleanup. Campaign tests
+verify campaigns need no credentials, browser pages execute through the utility worker, progress
+is persisted after import, and source provenance is retained.
 
 Renderer tests cover campaign creation, country and category criteria, result limits, progress,
-import and suppression counts, cancellation, provider readiness, and paid-operation states. The
-packaged Electron application rendered campaign history and creation at 1280 x 820 and 900 x 700.
-Full-page captures were inspected at full resolution. Controls, warnings, table hierarchy,
-responsive form layout, disabled credential state, and keyboard-focusable overflow regions were
-clear with no overlap or clipping. Automated axe scans passed, and the Impeccable detector
-returned no findings.
+import and suppression counts, cancellation, provider readiness, and the rendered-page state.
+The original Feature 30 packaged Electron validation covered campaign history and creation at
+1280 x 820 and 900 x 700, automated axe scans, and Impeccable detection.
 
-The stable Feature 30 regression gate passed 282 tests across 62 files. Formatting, zero-warning
-linting, strict CLI and desktop type checking, Prisma schema validation, the CLI production build,
-Windows x64 Electron packaging, and the packaged ASAR smoke test passed. No paid live provider
-request was made during automated validation; deterministic provider responses are used in tests.
+The 2026-07-31 Playwright-only amendment passed 284 tests across 62 files, formatting,
+zero-warning linting, strict CLI and desktop type checking, the CLI production build, and
+Impeccable detection. A bounded live Karachi dentist search returned a rendered business name,
+website, public phone, address, and Google Maps source URL. The browser closed after the result
+was returned. The original Feature 30 Windows package and ASAR smoke evidence remains the latest
+packaging result.
+
+The mixed website-status follow-up retained three live Karachi tailor prospects without websites
+in 12 seconds. Each record included its displayed public phone number, address, business name,
+category context, and Maps source. Provider, campaign, repository, and renderer tests cover public
+email and associated LinkedIn company-profile persistence when those fields are displayed.
+
+## Prospect Verification and Promotion Validation
+
+Features 31 and 32 add bounded website verification, separate verification observations,
+opportunity signals, normalized duplicate comparisons, and explicit client promotion. Repository
+tests cover website-less verification, public-detail transfer, exact-domain conflict warnings,
+explicit linking, and repeat-promotion protection. The workflow never starts discovery or an audit
+automatically.
+
+The prospect review UI exposes verification state, verified URL, homepage title, bounded page
+count, source provenance, opportunity signals, duplicate reasons, and deliberate promotion.
+Website-less promoted clients remain usable and clearly defer page discovery until a website is
+added. The complete gate passed 286 tests across 62 files, formatting, zero-warning linting,
+strict CLI and desktop type checking, the CLI production build, and project-local Impeccable
+detection.
+
+## Release 2B Acceptance Validation
+
+Feature 33 adds a consolidated campaign-to-client acceptance test covering approved-source
+provenance, source deduplication, qualification, explicit-only promotion, durable suppression,
+interruption recovery, and stable database-backed pagination across 120 prospects. No client is
+created before the deliberate promotion command, and promotion starts neither discovery nor an
+audit.
+
+The final gate passed 289 tests across 63 files, formatting, zero-warning linting, strict CLI and
+desktop type checking, Prisma validation, the production build, and project-local Impeccable
+detection. The HTTPS production dependency audit reported no known vulnerabilities.
+
+Windows x64 package inspection verified the ASAR, utility worker, Prisma runtime, Lighthouse,
+Playwright, bundled Chromium, and Squirrel installer. Automated axe scans, keyboard focus
+validation, and responsive workflow smoke passed across overview, clients, page inventory,
+prospects, prospect detail, campaigns, campaign creation, audits, and reports at 1280 x 820 and
+900 x 700. Full threat and release evidence is recorded in `context/release_2b_acceptance.md`.
 
 ## Failure and Cleanup Evidence
 

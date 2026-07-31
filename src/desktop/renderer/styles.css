@@ -984,6 +984,144 @@ button:focus-visible {
   min-height: 24rem;
 }
 
+.prospect-business-info {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 2fr);
+  gap: var(--space-xl);
+  padding: var(--space-xl);
+  border-bottom: 0.0625rem solid var(--rule);
+}
+
+.prospect-verification {
+  display: grid;
+  gap: 16px;
+}
+
+.signal-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signal-list li {
+  border: 1px solid var(--rule);
+  padding: 9px 12px;
+  background: var(--surface-subtle);
+  font-size: 0.875rem;
+}
+
+.signal-list .signal-positive {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--rule));
+  background: var(--success-tint);
+}
+
+.signal-list .signal-attention {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--rule));
+  background: var(--warning-tint);
+}
+
+.verification-facts {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(180px, 2fr) minmax(110px, 1fr);
+  gap: 16px;
+  margin: 0;
+}
+
+.verification-facts div {
+  min-width: 0;
+}
+
+.verification-facts dt,
+.duplicate-warning div span:last-child {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+}
+
+.verification-facts dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.duplicate-warning {
+  display: grid;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--rule));
+  padding: 12px 14px;
+  background: var(--warning-tint);
+}
+
+.duplicate-warning div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.success-message {
+  color: var(--success);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 760px) {
+  .verification-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .duplicate-warning div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.prospect-business-info h3,
+.prospect-business-info p,
+.prospect-business-info dl,
+.prospect-business-info dd {
+  margin: 0;
+}
+
+.prospect-business-info h3 {
+  font-size: 1rem;
+}
+
+.prospect-business-info p {
+  max-width: 34ch;
+  margin-top: var(--space-xs);
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+}
+
+.prospect-business-info dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-xl);
+}
+
+.prospect-business-info dl > div {
+  min-width: 0;
+  padding: var(--space-sm) 0;
+  border-bottom: 0.0625rem solid var(--rule);
+}
+
+.prospect-business-info dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.prospect-business-info dd {
+  margin-top: var(--space-xs);
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .prospect-qualification-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
@@ -1923,7 +2061,6 @@ button:focus-visible {
 .campaign-directory-heading,
 .campaign-title-group,
 .campaign-form-header,
-.campaign-provider-warning,
 .campaign-form-footer,
 .campaign-status,
 .campaign-progress,
@@ -1956,23 +2093,6 @@ button:focus-visible {
 .campaign-form-header p {
   margin: var(--space-xs) 0 0;
   color: var(--ink-muted);
-  font-size: 0.8125rem;
-}
-
-.campaign-provider-warning {
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-xl);
-  border-bottom: 0.0625rem solid var(--warning);
-  background: var(--warning-tint);
-  color: var(--warning-ink);
-}
-
-.campaign-provider-warning div {
-  display: grid;
-  gap: 0.125rem;
-}
-
-.campaign-provider-warning span {
   font-size: 0.8125rem;
 }
 
@@ -2466,6 +2586,11 @@ button:focus-visible {
 
   .prospect-qualification-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prospect-business-info {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-md);
   }
 
   .campaign-title-group,

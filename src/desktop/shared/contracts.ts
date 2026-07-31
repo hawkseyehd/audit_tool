@@ -30,12 +30,14 @@ export const IPC_CHANNELS = {
   resumeDiscoveryCampaign: "desktop:campaigns:resume",
   deleteProspect: "desktop:prospects:delete",
   getProspect: "desktop:prospects:get",
+  promoteProspect: "desktop:prospects:promote",
   setProspectState: "desktop:prospects:set-state",
   setClientStatus: "desktop:clients:set-status",
   startAuditJob: "desktop:audits:start",
   suppressProspect: "desktop:prospects:suppress",
   updateClient: "desktop:clients:update",
   updateProspect: "desktop:prospects:update",
+  verifyProspect: "desktop:prospects:verify",
 } as const;
 
 export const CLIENT_STATUSES = ["active", "paused", "archived"] as const;
@@ -89,7 +91,7 @@ export const clientRecordSchema = z
     id: clientIdSchema,
     locality: z.string().nullable(),
     notes: z.string().nullable(),
-    normalizedDomain: z.string().trim().min(1).max(253),
+    normalizedDomain: z.string().trim().min(1).max(253).nullable(),
     owner: z.string().nullable(),
     postalCode: z.string().nullable(),
     publicEmail: z.string().nullable(),
@@ -98,7 +100,7 @@ export const clientRecordSchema = z
     status: clientStatusSchema,
     tags: z.array(z.string().trim().min(1).max(50)).max(20),
     updatedAt: z.iso.datetime(),
-    websiteUrl: z.url(),
+    websiteUrl: z.url().nullable(),
   })
   .strict();
 
@@ -191,6 +193,12 @@ export const CAMPAIGN_STATES = [
 export const prospectStateSchema = z.enum(PROSPECT_STATES);
 export const prospectWebsiteAvailabilitySchema = z.enum(PROSPECT_WEBSITE_AVAILABILITIES);
 export const prospectDuplicateReviewStateSchema = z.enum(PROSPECT_DUPLICATE_REVIEW_STATES);
+export const prospectVerificationStateSchema = z.enum([
+  "not-verified",
+  "verified",
+  "partial",
+  "failed",
+]);
 export const campaignStateSchema = z.enum(CAMPAIGN_STATES);
 export const prospectIdSchema = z.uuid();
 export const campaignIdSchema = z.uuid();
@@ -239,9 +247,9 @@ export const discoveryCampaignInputSchema = campaignInputSchema
       .trim()
       .regex(/^[A-Za-z]{2}$/u, "Enter a two-letter country code")
       .transform((value) => value.toUpperCase()),
-    maxResults: z.number().int().min(1).max(5_000),
-    provider: z.literal("dataforseo-business-listings"),
-    providerTermsVersion: z.literal("reviewed-2026-07-25"),
+    maxResults: z.number().int().min(1).max(100),
+    provider: z.literal("playwright-web-search"),
+    providerTermsVersion: z.literal("reviewed-2026-07-26"),
     requiredFields: z
       .array(z.enum(["businessName", "websiteUrl", "publicPhone", "addressLine"]))
       .max(4)
@@ -253,6 +261,29 @@ export const discoveryCampaignInputSchema = campaignInputSchema
         code: "custom",
         message: "Enter a category or at least one keyword",
         path: ["category"],
+      });
+    }
+    if (
+      input.latitude === undefined &&
+      input.longitude === undefined &&
+      input.locality === undefined &&
+      input.region === undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Enter a city or region for browser-based discovery",
+        path: ["locality"],
+      });
+    }
+    if (
+      input.latitude !== undefined ||
+      input.longitude !== undefined ||
+      input.radiusKm !== undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Coordinate radius is not available for browser-based discovery",
+        path: ["radiusKm"],
       });
     }
   });
@@ -308,17 +339,14 @@ export const discoveryCampaignListResultSchema = z
 
 export const discoveryProviderSchema = z
   .object({
-    configured: z.boolean(),
-    credentialEnvironmentVariables: z.tuple([
-      z.literal("DATAFORSEO_LOGIN"),
-      z.literal("DATAFORSEO_PASSWORD"),
-    ]),
-    id: z.literal("dataforseo-business-listings"),
-    label: z.literal("DataForSEO Business Listings"),
-    maxResults: z.literal(5_000),
-    paidOperation: z.literal(true),
-    supportsRadius: z.boolean(),
-    termsVersion: z.literal("reviewed-2026-07-25"),
+    configured: z.literal(true),
+    credentialEnvironmentVariables: z.tuple([]),
+    id: z.literal("playwright-web-search"),
+    label: z.literal("Rendered map pages (Playwright)"),
+    maxResults: z.literal(100),
+    paidOperation: z.literal(false),
+    supportsRadius: z.literal(false),
+    termsVersion: z.literal("reviewed-2026-07-26"),
   })
   .strict();
 
@@ -401,6 +429,34 @@ export const prospectSourceRecordSchema = z
   })
   .strict();
 
+export const prospectDuplicateCandidateSchema = z
+  .object({
+    businessName: z.string().trim().min(1).max(200),
+    confidence: z.enum(["exact", "possible"]),
+    id: z.uuid(),
+    kind: z.enum(["client", "prospect"]),
+    reasons: z
+      .array(z.enum(["domain", "phone", "name-and-address", "source-record"]))
+      .min(1)
+      .max(4),
+  })
+  .strict();
+
+export const prospectOpportunitySignalSchema = z
+  .object({
+    kind: z.enum([
+      "website-reachable",
+      "https-available",
+      "website-unavailable",
+      "no-website-listed",
+      "limited-page-presence",
+      "public-contact-available",
+    ]),
+    label: z.string().trim().min(1).max(160),
+    tone: z.enum(["positive", "attention", "info"]),
+  })
+  .strict();
+
 export const prospectRecordSchema = z
   .object({
     activities: z.array(prospectActivitySchema).max(100),
@@ -415,11 +471,13 @@ export const prospectRecordSchema = z
     doNotContactAt: z.iso.datetime().nullable(),
     duplicateReviewState: prospectDuplicateReviewStateSchema,
     firstDiscoveredAt: z.iso.datetime(),
+    homepageTitle: z.string().nullable(),
     id: prospectIdSchema,
     lastVerifiedAt: z.iso.datetime().nullable(),
     locality: z.string().nullable(),
     normalizedDomain: z.string().nullable(),
     notes: z.string().nullable(),
+    opportunitySignals: z.array(prospectOpportunitySignalSchema).max(10),
     owner: z.string().nullable(),
     postalCode: z.string().nullable(),
     promotedClientId: clientIdSchema.nullable(),
@@ -437,8 +495,12 @@ export const prospectRecordSchema = z
     suppressedAt: z.iso.datetime().nullable(),
     tags: z.array(z.string().trim().min(1).max(50)).max(20),
     updatedAt: z.iso.datetime(),
+    verificationMessage: z.string().nullable(),
+    verificationState: prospectVerificationStateSchema,
+    verifiedWebsiteUrl: z.url().nullable(),
     websiteAvailability: prospectWebsiteAvailabilitySchema,
     websiteUrl: z.url().nullable(),
+    duplicateCandidates: z.array(prospectDuplicateCandidateSchema).max(25),
   })
   .strict();
 
@@ -534,6 +596,36 @@ export const prospectActionResultSchema = z.discriminatedUnion("ok", [
       error: z
         .object({
           code: z.enum(["confirmation-mismatch", "not-found", "promoted"]),
+          message: z.string().trim().min(1).max(500),
+        })
+        .strict(),
+      ok: z.literal(false),
+    })
+    .strict(),
+]);
+
+export const verifyProspectRequestSchema = z.object({ id: prospectIdSchema }).strict();
+export const prospectPromotionRequestSchema = z
+  .object({
+    existingClientId: clientIdSchema.optional(),
+    id: prospectIdSchema,
+  })
+  .strict();
+export const prospectPromotionResultSchema = z.discriminatedUnion("ok", [
+  z
+    .object({
+      clientId: clientIdSchema,
+      nextAction: z.enum(["discover-pages", "complete-profile"]),
+      ok: z.literal(true),
+      prospect: prospectRecordSchema,
+    })
+    .strict(),
+  z
+    .object({
+      error: z
+        .object({
+          clientId: clientIdSchema.optional(),
+          code: z.enum(["already-promoted", "duplicate-domain", "invalid-state", "not-found"]),
           message: z.string().trim().min(1).max(500),
         })
         .strict(),
@@ -1094,6 +1186,7 @@ export type ProspectImportResult = z.infer<typeof prospectImportResultSchema>;
 export type ProspectListQuery = z.infer<typeof prospectListQuerySchema>;
 export type ProspectListResult = z.infer<typeof prospectListResultSchema>;
 export type ProspectMutationResult = z.infer<typeof prospectMutationResultSchema>;
+export type ProspectPromotionResult = z.infer<typeof prospectPromotionResultSchema>;
 export type ProspectQualificationInput = z.infer<typeof prospectQualificationInputSchema>;
 export type ProspectRecord = z.infer<typeof prospectRecordSchema>;
 export type ProspectSourceInput = z.infer<typeof prospectSourceInputSchema>;
@@ -1169,6 +1262,9 @@ export interface DesktopApi {
   listProspects(query: ProspectListQuery): Promise<ProspectListResult>;
   listReportArtifacts(query: ReportArtifactListQuery): Promise<ReportArtifactListResult>;
   listWebsitePages(query: WebsitePageListQuery): Promise<WebsitePageListResult>;
+  promoteProspect(
+    request: z.infer<typeof prospectPromotionRequestSchema>,
+  ): Promise<ProspectPromotionResult>;
   openReport(
     request: z.infer<typeof reportArtifactActionRequestSchema>,
   ): Promise<ReportArtifactActionResult>;
@@ -1194,5 +1290,8 @@ export interface DesktopApi {
   updateClient(request: z.infer<typeof updateClientRequestSchema>): Promise<ClientMutationResult>;
   updateProspect(
     request: z.infer<typeof updateProspectRequestSchema>,
+  ): Promise<ProspectMutationResult>;
+  verifyProspect(
+    request: z.infer<typeof verifyProspectRequestSchema>,
   ): Promise<ProspectMutationResult>;
 }

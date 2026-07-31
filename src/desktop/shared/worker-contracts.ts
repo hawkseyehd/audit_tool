@@ -67,6 +67,7 @@ export const workerRequestSchema = z.discriminatedUnion("type", [
       campaignId: jobIdSchema,
       id: requestIdSchema,
       input: providerSearchInputSchema,
+      provider: z.literal("playwright-web-search"),
       type: z.literal("run-discovery-page"),
     })
     .strict(),

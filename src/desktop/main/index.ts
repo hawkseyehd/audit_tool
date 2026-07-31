@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { app, BrowserWindow, Menu } from "electron";
 
 import { ApplicationServices } from "./application-services.js";

@@ -22,9 +22,11 @@ public business websites and turns technical evidence into prioritized, client-r
   activity history, and focused client workspaces for pages, audits, and reports.
 - Separate provenance-aware prospect workspace with qualification states, search, filters,
   pagination, durable suppression, do-not-contact controls, and provider-defined retention.
-- DataForSEO discovery campaigns with validated geography and category criteria, paid-request
-  limits, utility-process execution, retries, cancellation, continuation, progress monitoring,
-  suppression-aware imports, and field-level provenance.
+- Playwright-only prospect discovery with validated geography and category criteria, rendered
+  Google Maps business cards and detail pages, bounded scrolling and pacing, cancellation,
+  progress monitoring, prospects with and without websites, displayed public business contact
+  details and company-profile links, suppression-aware imports, and field-level source
+  provenance.
 - Safe lightweight website discovery with durable page inventories, classifications, availability,
   recommendations, rediscovery changes, search, filters, and bounded pagination.
 - Durable page inclusion and exclusion with recommended defaults and immutable audit scope
@@ -48,12 +50,10 @@ pnpm browser:install
 pnpm build
 ```
 
-Live business discovery requires DataForSEO API credentials in the process environment. The
-desktop renderer never receives or stores these values:
+Prospect discovery uses rendered public pages through Playwright and requires no provider API
+credentials:
 
 ```powershell
-$env:DATAFORSEO_LOGIN="your-api-login"
-$env:DATAFORSEO_PASSWORD="your-api-password"
 pnpm desktop:start
 ```
 
@@ -205,7 +205,7 @@ reviews.
 - Ordered features: `context/feature_list_in_order.md`
 - Coding standards: `context/conding_standards.md`
 - Prospect retention: `context/prospect_retention_policy.md`
-- DataForSEO provider policy: `context/dataforseo_provider_policy.md`
+- Playwright discovery policy: `context/playwright_discovery_policy.md`
 - QA validation: `context/qa_validation.md`
 - MVP acceptance: `context/mvp_acceptance.md`
 - Post-MVP backlog: `context/post_mvp_backlog.md`

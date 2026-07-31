@@ -158,6 +158,7 @@ function installApi(overrides: Partial<DesktopApi>): void {
     listReportArtifacts: vi.fn(),
     listWebsitePages: vi.fn(),
     openReport: vi.fn(),
+    promoteProspect: vi.fn(),
     revealReport: vi.fn(),
     setClientStatus: vi.fn(),
     setProspectState: vi.fn(),
@@ -167,6 +168,7 @@ function installApi(overrides: Partial<DesktopApi>): void {
     suppressProspect: vi.fn(),
     updateClient: vi.fn(),
     updateProspect: vi.fn(),
+    verifyProspect: vi.fn(),
     ...overrides,
   };
   Object.defineProperty(window, "auditTool", { configurable: true, value: api });

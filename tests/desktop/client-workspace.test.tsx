@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ClientWorkspace } from "../../src/desktop/renderer/clients/client-workspace.js";
 import type { ClientRecord, DesktopApi } from "../../src/desktop/shared/contracts.js";
 
+const clientWebsiteUrl = "https://northstar.test/";
 const client: ClientRecord = {
   activities: [
     {
@@ -33,7 +34,7 @@ const client: ClientRecord = {
   status: "active",
   tags: ["Healthcare"],
   updatedAt: "2026-07-23T10:00:00.000Z",
-  websiteUrl: "https://northstar.test/",
+  websiteUrl: clientWebsiteUrl,
 };
 
 function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
@@ -76,6 +77,7 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       total: 0,
     }),
     openReport: vi.fn(),
+    promoteProspect: vi.fn(),
     revealReport: vi.fn(),
     setClientStatus: vi
       .fn()
@@ -87,6 +89,7 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     suppressProspect: vi.fn(),
     updateClient: vi.fn().mockResolvedValue({ client, ok: true }),
     updateProspect: vi.fn(),
+    verifyProspect: vi.fn(),
     ...overrides,
   };
   Object.defineProperty(window, "auditTool", { configurable: true, value: api });
@@ -121,12 +124,12 @@ describe("ClientWorkspace", () => {
     await screen.findByText("No active clients");
     await user.click(screen.getByRole("button", { name: "New client" }));
     await user.type(screen.getByLabelText("Business name *"), client.businessName);
-    await user.type(screen.getByLabelText("Website URL *"), client.websiteUrl);
+    await user.type(screen.getByLabelText("Website URL *"), clientWebsiteUrl);
     await user.click(screen.getByRole("button", { name: "Create client" }));
 
     expect(createClient).toHaveBeenCalledOnce();
     expect(await screen.findByRole("heading", { name: client.businessName })).toBeTruthy();
-    expect(screen.getByText(client.websiteUrl)).toBeTruthy();
+    expect(screen.getByText(clientWebsiteUrl)).toBeTruthy();
   });
 
   it("keeps duplicate domains actionable in the form", async () => {
@@ -148,7 +151,7 @@ describe("ClientWorkspace", () => {
     await screen.findByText("No active clients");
     await user.click(screen.getByRole("button", { name: "New client" }));
     await user.type(screen.getByLabelText("Business name *"), "Duplicate Dental");
-    await user.type(screen.getByLabelText("Website URL *"), client.websiteUrl);
+    await user.type(screen.getByLabelText("Website URL *"), clientWebsiteUrl);
     await user.click(screen.getByRole("button", { name: "Create client" }));
 
     expect(

@@ -51,6 +51,10 @@ export const PROSPECT_SCHEMA_STATEMENTS = [
     "socialProfilesJson" TEXT NOT NULL DEFAULT '[]',
     "websiteAvailability" TEXT NOT NULL DEFAULT 'unknown',
     "discoveredPageCount" INTEGER,
+    "verifiedWebsiteUrl" TEXT,
+    "homepageTitle" TEXT,
+    "verificationState" TEXT NOT NULL DEFAULT 'not-verified',
+    "verificationMessage" TEXT,
     "confidence" INTEGER NOT NULL DEFAULT 0,
     "duplicateReviewState" TEXT NOT NULL DEFAULT 'not-reviewed',
     "owner" TEXT,
@@ -141,4 +145,14 @@ export const CAMPAIGN_SCHEMA_COLUMNS = [
     name: "providerRequestCount",
   },
   { definition: '"warningMessage" TEXT', name: "warningMessage" },
+] as const;
+
+export const PROSPECT_SCHEMA_COLUMNS = [
+  { definition: '"verifiedWebsiteUrl" TEXT', name: "verifiedWebsiteUrl" },
+  { definition: '"homepageTitle" TEXT', name: "homepageTitle" },
+  {
+    definition: "\"verificationState\" TEXT NOT NULL DEFAULT 'not-verified'",
+    name: "verificationState",
+  },
+  { definition: '"verificationMessage" TEXT', name: "verificationMessage" },
 ] as const;

@@ -14,12 +14,20 @@ import {
 import type { DesktopDatabaseService } from "./database-service.js";
 import { WorkerUnavailableError, type WorkerCoordinator } from "./worker-coordinator.js";
 
-const PROVIDER = "dataforseo-business-listings";
-const TERMS_VERSION = "reviewed-2026-07-25";
-const MAX_PROVIDER_CALLS = 5;
-const PROVIDER_PAGE_LIMIT = 1_000;
+const DEFAULT_PROVIDER = "playwright-web-search";
+const TERMS_VERSION = "reviewed-2026-07-26";
 const INTER_PAGE_DELAY_MS = 500;
 const RETENTION_DAYS = 30;
+
+type SupportedProvider = typeof DEFAULT_PROVIDER;
+
+interface ProviderSettings {
+  fieldProvenance: string;
+  id: SupportedProvider;
+  maxRequests: number;
+  pageLimit: number;
+  retentionPolicy: string;
+}
 
 export class DiscoveryCampaignManager {
   readonly #database: DesktopDatabaseService;
@@ -45,19 +53,19 @@ export class DiscoveryCampaignManager {
 
   provider(): DiscoveryProvider {
     return discoveryProviderSchema.parse({
-      configured: providerConfigured(),
-      credentialEnvironmentVariables: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"],
-      id: PROVIDER,
-      label: "DataForSEO Business Listings",
-      maxResults: 5_000,
-      paidOperation: true,
-      supportsRadius: true,
+      configured: true,
+      credentialEnvironmentVariables: [],
+      id: DEFAULT_PROVIDER,
+      label: "Rendered map pages (Playwright)",
+      maxResults: 100,
+      paidOperation: false,
+      supportsRadius: false,
       termsVersion: TERMS_VERSION,
     });
   }
 
   async create(input: DiscoveryCampaignInput): Promise<DiscoveryCampaignMutationResult> {
-    const unavailable = this.#preflight();
+    const unavailable = this.#preflight(input.provider);
     if (unavailable !== null) return unavailable;
     const id = await this.#database.campaigns.create(input);
     await this.#database.campaigns.queue(id);
@@ -68,10 +76,10 @@ export class DiscoveryCampaignManager {
   }
 
   async resume(id: string): Promise<DiscoveryCampaignMutationResult> {
-    const unavailable = this.#preflight();
-    if (unavailable !== null) return unavailable;
     const existing = await this.#database.campaigns.get(id);
     if (existing === null) return mutationError("not-found", "Campaign was not found");
+    const unavailable = this.#preflight(existing.provider);
+    if (unavailable !== null) return unavailable;
     if (!["cancelled", "failed", "paused"].includes(existing.state)) {
       return mutationError("invalid-state", `A ${existing.state} campaign cannot be resumed`);
     }
@@ -106,12 +114,9 @@ export class DiscoveryCampaignManager {
     await active.promise.catch(() => undefined);
   }
 
-  #preflight(): DiscoveryCampaignMutationResult | null {
-    if (!providerConfigured()) {
-      return mutationError(
-        "not-configured",
-        "Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD before running a paid campaign.",
-      );
+  #preflight(provider: string): DiscoveryCampaignMutationResult | null {
+    if (providerSettings(provider) === null) {
+      return mutationError("invalid-state", "This campaign uses an unsupported discovery provider");
     }
     if (!this.#worker.ready) {
       return mutationError("worker-unavailable", "The desktop worker is unavailable");
@@ -141,10 +146,12 @@ export class DiscoveryCampaignManager {
       await this.#database.campaigns.start(campaignId);
       let campaign = await this.#database.campaigns.getExecution(campaignId);
       if (campaign === null) throw new Error("Campaign was not found");
+      const settings = providerSettings(campaign.provider);
+      if (settings === null) throw new Error("Campaign uses an unsupported discovery provider");
 
       while (
         campaign.processedCount < campaign.maxResults &&
-        campaign.providerRequestCount < MAX_PROVIDER_CALLS
+        campaign.providerRequestCount < settings.maxRequests
       ) {
         if (this.#cancelRequested.has(campaignId)) return;
         const remaining = campaign.maxResults - campaign.processedCount;
@@ -159,13 +166,14 @@ export class DiscoveryCampaignManager {
             exclusions: campaign.exclusionRules,
             keywords: campaign.keywords,
             ...(campaign.latitude === null ? {} : { latitude: campaign.latitude }),
-            limit: Math.min(PROVIDER_PAGE_LIMIT, remaining),
+            limit: Math.min(settings.pageLimit, remaining),
             ...(campaign.locality === null ? {} : { locality: campaign.locality }),
             ...(campaign.longitude === null ? {} : { longitude: campaign.longitude }),
             ...(campaign.radiusKm === null ? {} : { radiusKm: campaign.radiusKm }),
             ...(campaign.region === null ? {} : { region: campaign.region }),
             requireWebsite: campaign.requireWebsite,
           },
+          provider: settings.id,
         });
         if (outcome.type === "discovery-cancelled" || this.#cancelRequested.has(campaignId)) {
           await this.#database.campaigns.cancel(campaignId);
@@ -180,6 +188,7 @@ export class DiscoveryCampaignManager {
           campaignId,
           outcome.page.records,
           campaign.requiredFields,
+          settings,
         );
         const warnings = [
           outcome.page.warning,
@@ -203,11 +212,11 @@ export class DiscoveryCampaignManager {
 
       if (this.#cancelRequested.has(campaignId)) return;
       const limited =
-        campaign.providerRequestCount >= MAX_PROVIDER_CALLS && campaign.hasContinuation;
+        campaign.providerRequestCount >= settings.maxRequests && campaign.hasContinuation;
       await this.#database.campaigns.complete(
         campaignId,
         limited
-          ? "Campaign reached the five-request safety limit. Create a narrower campaign for more results."
+          ? `Campaign reached the ${String(settings.maxRequests)}-request safety limit. Create a narrower campaign for more results.`
           : undefined,
       );
     } catch (error) {
@@ -228,6 +237,7 @@ export class DiscoveryCampaignManager {
     campaignId: string,
     records: readonly ProviderBusinessRecord[],
     requiredFields: readonly string[],
+    settings: ProviderSettings,
   ): Promise<{ imported: number; skippedRequired: number; suppressed: number }> {
     let imported = 0;
     let skippedRequired = 0;
@@ -240,7 +250,7 @@ export class DiscoveryCampaignManager {
         continue;
       }
       const result = await this.#database.prospects.importFromSource(
-        toSourceInput(campaignId, collectedAt, record),
+        toSourceInput(campaignId, collectedAt, record, settings),
       );
       if (result.status === "suppressed") suppressed += 1;
       else imported += 1;
@@ -253,9 +263,10 @@ function toSourceInput(
   campaignId: string,
   collectedAt: string,
   record: ProviderBusinessRecord,
+  settings: ProviderSettings,
 ): ProspectSourceInput {
   const permittedFields = Object.entries(record)
-    .filter(([, value]) => value !== undefined)
+    .filter(([, value]) => value !== undefined && (!Array.isArray(value) || value.length > 0))
     .map(([field]) => field)
     .filter((field) => field !== "providerRecordId");
   return {
@@ -266,18 +277,19 @@ function toSourceInput(
     collectedAt,
     ...(record.country === undefined ? {} : { country: record.country }),
     fieldProvenance: Object.fromEntries(
-      permittedFields.map((field) => [field, "DataForSEO Business Listings Search Live"]),
+      permittedFields.map((field) => [field, settings.fieldProvenance]),
     ),
     ...(record.locality === undefined ? {} : { locality: record.locality }),
     permittedFields,
     ...(record.postalCode === undefined ? {} : { postalCode: record.postalCode }),
-    provider: PROVIDER,
+    provider: settings.id,
     providerRecordId: record.providerRecordId,
+    ...(record.publicEmail === undefined ? {} : { publicEmail: record.publicEmail }),
     ...(record.publicPhone === undefined ? {} : { publicPhone: record.publicPhone }),
     ...(record.region === undefined ? {} : { region: record.region }),
     retentionDays: RETENTION_DAYS,
-    retentionPolicy: "DataForSEO approved public business fields; retain for 30 days",
-    socialProfiles: [],
+    retentionPolicy: settings.retentionPolicy,
+    socialProfiles: record.socialProfiles ?? [],
     ...(record.sourceUpdatedAt === undefined ? {} : { sourceUpdatedAt: record.sourceUpdatedAt }),
     ...(record.sourceUrl === undefined ? {} : { sourceUrl: record.sourceUrl }),
     ...(record.websiteUrl === undefined ? {} : { websiteUrl: record.websiteUrl }),
@@ -303,11 +315,18 @@ function hasRequiredFields(
   });
 }
 
-function providerConfigured(): boolean {
-  return (
-    (process.env.DATAFORSEO_LOGIN?.trim().length ?? 0) > 0 &&
-    (process.env.DATAFORSEO_PASSWORD?.trim().length ?? 0) > 0
-  );
+function providerSettings(provider: string): ProviderSettings | null {
+  if (provider === DEFAULT_PROVIDER) {
+    return {
+      fieldProvenance: "Rendered Google Maps business page collected in a Playwright session",
+      id: DEFAULT_PROVIDER,
+      maxRequests: 5,
+      pageLimit: 20,
+      retentionPolicy:
+        "Public business fields collected from rendered Google Maps pages; retain for 30 days",
+    };
+  }
+  return null;
 }
 
 function mutationError(

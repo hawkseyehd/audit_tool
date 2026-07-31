@@ -327,6 +327,10 @@ model Prospect {
   socialProfilesJson   String                  @default("[]")
   websiteAvailability  String                  @default("unknown")
   discoveredPageCount  Int?
+  verifiedWebsiteUrl   String?
+  homepageTitle        String?
+  verificationState    String                  @default("not-verified")
+  verificationMessage  String?
   confidence           Int                     @default(0)
   duplicateReviewState String                  @default("not-reviewed")
   owner                String?

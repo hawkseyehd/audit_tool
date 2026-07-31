@@ -58,7 +58,6 @@ function nullable(value: string | undefined): string | null {
 
 function toRecord(client: DetailClient): ClientRecord {
   const website = client.websites[0];
-  if (website === undefined) throw new Error("Client website record is missing");
 
   return clientRecordSchema.parse({
     activities: client.activities.map((activity) => ({
@@ -74,7 +73,7 @@ function toRecord(client: DetailClient): ClientRecord {
     createdAt: client.createdAt.toISOString(),
     id: client.id,
     locality: client.locality,
-    normalizedDomain: website.normalizedDomain,
+    normalizedDomain: website?.normalizedDomain ?? null,
     notes: client.notes,
     owner: client.owner,
     postalCode: client.postalCode,
@@ -84,7 +83,7 @@ function toRecord(client: DetailClient): ClientRecord {
     status: client.status,
     tags: client.tags.map(({ tag }) => tag.name).sort((left, right) => left.localeCompare(right)),
     updatedAt: client.updatedAt.toISOString(),
-    websiteUrl: website.normalizedUrl,
+    websiteUrl: website?.normalizedUrl ?? null,
   });
 }
 

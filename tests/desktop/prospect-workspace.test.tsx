@@ -14,13 +14,13 @@ import type {
 
 const provider = {
   configured: true,
-  credentialEnvironmentVariables: ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"] as const,
-  id: "dataforseo-business-listings" as const,
-  label: "DataForSEO Business Listings" as const,
-  maxResults: 5_000 as const,
-  paidOperation: true as const,
-  supportsRadius: true as const,
-  termsVersion: "reviewed-2026-07-25" as const,
+  credentialEnvironmentVariables: [] as const,
+  id: "playwright-web-search" as const,
+  label: "Rendered map pages (Playwright)" as const,
+  maxResults: 100 as const,
+  paidOperation: false as const,
+  supportsRadius: false as const,
+  termsVersion: "reviewed-2026-07-26" as const,
 };
 
 const campaign: DiscoveryCampaignRecord = {
@@ -62,7 +62,7 @@ const prospect: ProspectRecord = {
       summary: "Prospect imported from approved-fixture",
     },
   ],
-  addressLine: null,
+  addressLine: "12 Sea View Road",
   businessName: "Northstar Dental",
   campaignId: null,
   category: "Dental clinic",
@@ -72,21 +72,24 @@ const prospect: ProspectRecord = {
   discoveredPageCount: null,
   doNotContactAt: null,
   duplicateReviewState: "not-reviewed",
+  duplicateCandidates: [],
   firstDiscoveredAt: "2026-07-25T10:00:00.000Z",
+  homepageTitle: null,
   id: "953c75a4-6293-4fbc-bfe6-595f68368c1c",
   lastVerifiedAt: "2026-07-25T10:00:00.000Z",
   locality: "Karachi",
   normalizedDomain: "northstar.test",
   notes: null,
+  opportunitySignals: [],
   owner: null,
   postalCode: null,
   promotedClientId: null,
-  publicEmail: null,
-  publicPhone: null,
+  publicEmail: "hello@northstar.test",
+  publicPhone: "+92 21 555 0100",
   region: null,
   retainedUntil: "2027-07-25T10:00:00.000Z",
   serviceArea: null,
-  socialProfiles: [],
+  socialProfiles: ["https://www.linkedin.com/company/northstar-dental/"],
   sourceProvider: "approved-fixture",
   sourceRecordCount: 1,
   sourceRecords: [
@@ -109,6 +112,9 @@ const prospect: ProspectRecord = {
   suppressedAt: null,
   tags: [],
   updatedAt: "2026-07-25T10:00:00.000Z",
+  verificationMessage: null,
+  verificationState: "not-verified",
+  verifiedWebsiteUrl: null,
   websiteAvailability: "available",
   websiteUrl: "https://northstar.test/",
 };
@@ -152,6 +158,7 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     listReportArtifacts: vi.fn(),
     listWebsitePages: vi.fn(),
     openReport: vi.fn(),
+    promoteProspect: vi.fn(),
     revealReport: vi.fn(),
     retryAuditJob: vi.fn(),
     resumeDiscoveryCampaign: vi.fn(),
@@ -175,6 +182,7 @@ function installApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       ok: true,
       prospect: { ...prospect, confidence: 85, owner: "Aisha", tags: ["Priority"] },
     }),
+    verifyProspect: vi.fn(),
     ...overrides,
   };
   Object.defineProperty(window, "auditTool", { configurable: true, value: api });
@@ -204,6 +212,9 @@ describe("ProspectWorkspace", () => {
 
     await user.click(screen.getByRole("button", { name: /Northstar Dental/u }));
     expect(await screen.findByRole("heading", { name: "Qualification details" })).toBeTruthy();
+    expect(screen.getByText("hello@northstar.test")).toBeTruthy();
+    expect(screen.getByText("+92 21 555 0100")).toBeTruthy();
+    expect(screen.getByText("linkedin.com/company/northstar-dental")).toBeTruthy();
     await user.click(screen.getByRole("tab", { name: "Sources" }));
     expect(screen.getByText("Approved for one year.")).toBeTruthy();
   });
@@ -255,7 +266,7 @@ describe("ProspectWorkspace", () => {
     });
   });
 
-  it("creates a bounded paid discovery campaign from the prospect workspace", async () => {
+  it("creates a bounded free discovery campaign from the prospect workspace", async () => {
     const createDiscoveryCampaign = vi
       .fn<DesktopApi["createDiscoveryCampaign"]>()
       .mockResolvedValue({ campaign: { ...campaign, state: "queued" }, ok: true });
@@ -276,6 +287,7 @@ describe("ProspectWorkspace", () => {
     await user.type(screen.getByLabelText("Country code *"), "PK");
     await user.type(screen.getByLabelText("City or locality"), "Karachi");
     await user.type(screen.getByLabelText("Category"), "dental_clinic");
+    expect(screen.getByText("Rendered map-page search")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Start discovery" }));
 
     await waitFor(() => {
@@ -283,7 +295,9 @@ describe("ProspectWorkspace", () => {
         country: "PK",
         locality: "Karachi",
         maxResults: 100,
-        provider: "dataforseo-business-listings",
+        provider: "playwright-web-search",
+        requireWebsite: false,
+        requiredFields: ["businessName"],
       });
     });
   });

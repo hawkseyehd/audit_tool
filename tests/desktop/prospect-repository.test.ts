@@ -184,6 +184,79 @@ describe("ProspectRepository", () => {
       state: "promoted",
     });
   });
+
+  it("verifies website-less prospects and promotes them without starting discovery", async () => {
+    const imported = await prospects.importFromSource(
+      sourceInput({
+        providerRecordId: "without-website",
+        publicPhone: "+92 21 555 0100",
+        websiteUrl: undefined,
+      }),
+    );
+    if (imported.status !== "created") throw new Error("Expected a created prospect");
+
+    await expect(prospects.verify(imported.prospect.id)).resolves.toMatchObject({
+      ok: true,
+      prospect: {
+        verificationState: "partial",
+        websiteAvailability: "unavailable",
+      },
+    });
+    await prospects.setState(imported.prospect.id, "qualified");
+    const promoted = await prospects.promote(imported.prospect.id);
+    expect(promoted).toMatchObject({
+      nextAction: "complete-profile",
+      ok: true,
+      prospect: { state: "promoted" },
+    });
+    if (!promoted.ok) throw new Error("Expected promotion to succeed");
+    await expect(
+      database.client.findUniqueOrThrow({
+        include: { websites: true },
+        where: { id: promoted.clientId },
+      }),
+    ).resolves.toMatchObject({
+      businessName: "Northstar Dental",
+      publicPhone: "+92 21 555 0100",
+      websites: [],
+    });
+  });
+
+  it("requires explicit linking when a prospect domain already belongs to a client", async () => {
+    const imported = await prospects.importFromSource(sourceInput());
+    if (imported.status !== "created") throw new Error("Expected a created prospect");
+    await prospects.setState(imported.prospect.id, "qualified");
+    const clientId = "e13b23dd-545e-47b0-8cee-24db3799b3de";
+    await database.client.create({
+      data: {
+        businessName: "Existing client",
+        id: clientId,
+        searchText: "existing client northstar.test",
+        websites: {
+          create: {
+            id: "8d6383c4-aa55-477d-82a1-417b6c34102f",
+            normalizedDomain: "northstar.test",
+            normalizedUrl: "https://northstar.test/",
+            url: "https://northstar.test/",
+          },
+        },
+      },
+    });
+
+    await expect(prospects.promote(imported.prospect.id)).resolves.toMatchObject({
+      error: { clientId, code: "duplicate-domain" },
+      ok: false,
+    });
+    await expect(prospects.promote(imported.prospect.id, clientId)).resolves.toMatchObject({
+      clientId,
+      ok: true,
+      prospect: { promotedClientId: clientId, state: "promoted" },
+    });
+    await expect(prospects.promote(imported.prospect.id, clientId)).resolves.toMatchObject({
+      error: { code: "already-promoted" },
+      ok: false,
+    });
+  });
 });
 
 function sourceInput(overrides: Partial<ProspectSourceInput> = {}): ProspectSourceInput {
